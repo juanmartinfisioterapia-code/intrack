@@ -1895,19 +1895,15 @@ function stravaInit() {
   stravaToken = localStorage.getItem('veloidoor_strava_token') || null;
   const tokenExp = parseInt(localStorage.getItem('veloidoor_strava_token_exp') || '0');
 
-  // Capturar token del hash si venimos de OAuth redirect
-  const hash = window.location.hash;
-  if(hash.includes('access_token=')) {
-    const params = new URLSearchParams(hash.replace('#','?').slice(1));
-    const newToken = params.get('access_token');
-    const expiresIn = parseInt(params.get('expires_in') || '21600');
-    if(newToken) {
-      stravaToken = newToken;
-      localStorage.setItem('veloidoor_strava_token', newToken);
-      localStorage.setItem('veloidoor_strava_token_exp', Date.now() + expiresIn * 1000);
-      // Limpiar hash de la URL
-      history.replaceState(null, '', window.location.pathname);
-    }
+  // Capturar código de autorización del callback OAuth
+  const urlParams = new URLSearchParams(window.location.search);
+  const authCode = urlParams.get('code');
+  if(authCode) {
+    // Limpiar URL
+    history.replaceState(null, '', window.location.pathname);
+    // Intercambiar código por token via proxy CORS
+    exchangeCodeForToken(authCode);
+    return;
   }
 
   // Token expirado
@@ -1925,6 +1921,56 @@ function stravaInit() {
   }
 }
 
+// Intercambio de código por token usando Strava token endpoint
+// Necesitamos el client_secret — lo guardamos en localStorage la primera vez
+async function exchangeCodeForToken(code) {
+  showStravaConnected();
+  document.getElementById('strava-athlete-name').textContent = 'Conectando…';
+  document.getElementById('strava-athlete-stats').textContent = 'Intercambiando token con Strava…';
+  document.getElementById('strava-list-container').innerHTML = `
+    <div style="text-align:center;padding:2rem;color:var(--t3);">
+      <div class="loading-spin" style="width:24px;height:24px;border-width:3px;margin:0 auto .75rem;"></div><br>
+      Autenticando con Strava…
+    </div>`;
+
+  // Necesitamos el client_secret para el intercambio
+  let clientSecret = localStorage.getItem('intrack_strava_secret') || '';
+  if(!clientSecret) {
+    clientSecret = prompt('Para completar la conexión, introduce tu Strava Client Secret\n(lo encuentras en developers.strava.com → tu app → "Mostrar" junto a "Secreto de cliente"):');
+    if(!clientSecret) { showStravaDisconnected(); showToast('Necesitas el Client Secret para conectar','error'); return; }
+    localStorage.setItem('intrack_strava_secret', clientSecret.trim());
+  }
+
+  try {
+    const res = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: stravaClientId,
+        client_secret: clientSecret.trim(),
+        code,
+        grant_type: 'authorization_code'
+      })
+    });
+    const data = await res.json();
+    if(data.errors || !data.access_token) {
+      // Secret incorrecto — limpiar y pedir de nuevo
+      localStorage.removeItem('intrack_strava_secret');
+      throw new Error(data.message || 'Token inválido — verifica el Client Secret');
+    }
+    stravaToken = data.access_token;
+    localStorage.setItem('veloidoor_strava_token', stravaToken);
+    localStorage.setItem('veloidoor_strava_token_exp', Date.now() + data.expires_in * 1000);
+    if(data.refresh_token) localStorage.setItem('intrack_strava_refresh', data.refresh_token);
+    showStravaConnected();
+    loadStravaData();
+    showToast('✅ Conectado con Strava', 'success');
+  } catch(e) {
+    showStravaDisconnected();
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
 function saveClientId() {
   const val = document.getElementById('strava-client-id').value.trim();
   if(!val || isNaN(val)) { showToast('Client ID debe ser un número','error'); return; }
@@ -1936,14 +1982,16 @@ function saveClientId() {
 // ── OAUTH LOGIN ─────────────────────────────────────────
 function stravaLogin() {
   if(!stravaClientId) {
-    const id = document.getElementById('strava-client-id').value.trim();
-    if(!id) { showToast('Introduce tu Client ID de Strava primero','error'); return; }
+    const id = document.getElementById('strava-client-id')?.value.trim();
+    if(!id) { showToast('Client ID no configurado','error'); return; }
     stravaClientId = id;
     localStorage.setItem('veloidoor_strava_client_id', id);
   }
-  const redirectUri = encodeURIComponent(window.location.href.split('#')[0].split('?')[0]);
-  const scope = 'read,activity:read_all';
-  const url = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&response_type=token&redirect_uri=${redirectUri}&scope=${scope}&approval_prompt=auto`;
+  // Strava ya no soporta implicit flow (response_type=token)
+  // Usamos authorization_code flow con redirect a nuestra página
+  const redirectUri = encodeURIComponent('https://juanmartinfisioterapia-code.github.io/intrack/');
+  const scope = 'read,activity:read_all,activity:write';
+  const url = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}&approval_prompt=auto`;
   window.location.href = url;
 }
 

@@ -1,0 +1,2913 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InTrack v5</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0a0c10; --surface:#12151b; --s2:#1a1e27; --s3:#222736;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+  --accent:#00e5a0; --accent2:#00b87a; --adim:rgba(0,229,160,0.12);
+  --warn:#f59e0b; --danger:#ef4444; --info:#3b82f6;
+  --text:#f0f2f5; --t2:#8892a0; --t3:#5a6370;
+  --mono:'JetBrains Mono',monospace; --sans:'Syne',sans-serif;
+  /* Power zones */
+  --z1:#64748b; --z2:#22c55e; --z3:#eab308; --z4:#f97316; --z5:#ef4444; --z6:#a855f7;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:200;}
+.logo{font-size:1.15rem;font-weight:800;letter-spacing:-.03em;color:var(--accent);}
+.logo span{color:var(--text);}
+.logo small{font-size:.6rem;background:var(--adim);color:var(--accent);border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle;}
+/* PROTOCOL BADGE */
+.proto-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono);letter-spacing:.04em;}
+.proto-ftms{background:rgba(0,229,160,.15);color:#00e5a0;border:1px solid rgba(0,229,160,.3);}
+.proto-wahoo{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}
+.proto-elite{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+.proto-erg{background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);}
+.proto-none{background:var(--s2);color:var(--t3);border:1px solid var(--border);}
+/* COMPAT TABLE */
+.compat-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.compat-table th{text-align:left;padding:.5rem .75rem;font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);}
+.compat-table td{padding:.6rem .75rem;border-bottom:1px solid var(--border);color:var(--t2);}
+.compat-table tr:last-child td{border-bottom:none;}
+.compat-table td:first-child{color:var(--text);font-weight:600;}
+.compat-ok{color:#22c55e;font-weight:700;}
+.compat-partial{color:#f59e0b;font-weight:700;}
+.compat-no{color:#ef4444;}
+/* STRAVA */
+.strava-btn{background:#fc4c02;color:#fff;border:none;border-radius:8px;padding:.65rem 1.3rem;font-family:var(--sans);font-size:.88rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;transition:all .2s;}
+.strava-btn:hover{background:#e04400;transform:translateY(-1px);}
+.strava-connected{background:rgba(252,76,2,.12);border:1px solid rgba(252,76,2,.35);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;}
+.strava-avatar{width:40px;height:40px;border-radius:50%;border:2px solid #fc4c02;}
+.strava-info{flex:1;}
+.strava-info strong{display:block;font-size:.92rem;}
+.strava-info small{font-size:.75rem;color:var(--t2);}
+/* TABS */
+.tab-bar{display:flex;gap:.3rem;margin-bottom:1.25rem;background:var(--s2);border-radius:8px;padding:.25rem;}
+.tab-btn{flex:1;background:none;border:none;color:var(--t2);font-family:var(--sans);font-size:.82rem;font-weight:600;padding:.5rem .75rem;border-radius:6px;cursor:pointer;transition:all .2s;}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+/* ACTIVITY LIST */
+.activity-list{display:flex;flex-direction:column;gap:.5rem;max-height:420px;overflow-y:auto;padding-right:.25rem;}
+.activity-list::-webkit-scrollbar{width:4px;}
+.activity-list::-webkit-scrollbar-track{background:var(--s2);}
+.activity-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.activity-item{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:.85rem 1rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.9rem;}
+.activity-item:hover{border-color:var(--accent);background:var(--adim);}
+.activity-item.selected{border-color:var(--accent);background:var(--adim);}
+.activity-icon{font-size:1.4rem;flex-shrink:0;}
+.activity-info{flex:1;min-width:0;}
+.activity-name{font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.activity-meta{font-size:.72rem;color:var(--t2);margin-top:.15rem;display:flex;gap:.75rem;flex-wrap:wrap;}
+.activity-badge{font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:3px;font-family:var(--mono);}
+.badge-habitual{background:rgba(0,229,160,.15);color:var(--accent);border:1px solid rgba(0,229,160,.25);}
+.badge-route{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25);}
+.activity-stats{text-align:right;flex-shrink:0;}
+.activity-stats .dist{font-size:.92rem;font-weight:800;font-family:var(--mono);color:var(--text);}
+.activity-stats .elev{font-size:.7rem;color:var(--t3);}
+/* SEARCH */
+.search-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:.85rem;padding:.55rem .85rem;outline:none;margin-bottom:.75rem;transition:border-color .2s;}
+.search-input:focus{border-color:var(--accent);}
+/* SETUP NOTICE */
+.setup-notice{background:rgba(252,76,2,.07);border:1px solid rgba(252,76,2,.25);border-radius:10px;padding:1.1rem 1.25rem;font-size:.83rem;line-height:1.7;color:var(--t2);}
+.setup-notice strong{color:#fc4c02;}
+.setup-notice code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:.8rem;color:var(--text);}
+/* SENSOR CARDS */
+.sensor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.25rem;}
+@media(max-width:600px){.sensor-grid{grid-template-columns:1fr;}}
+.sensor-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;transition:border-color .3s;}
+.sensor-card.connected{border-color:var(--accent);}
+.sensor-card.priority{border-color:#f59e0b;}
+.sensor-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;}
+.sensor-icon{font-size:1.6rem;}
+.sensor-title{font-size:.88rem;font-weight:700;flex:1;}
+.sensor-status{font-size:.68rem;font-family:var(--mono);padding:2px 7px;border-radius:3px;font-weight:700;}
+.ss-off{background:var(--s3);color:var(--t3);}
+.ss-on{background:var(--adim);color:var(--accent);}
+.ss-pri{background:rgba(245,158,11,.15);color:#f59e0b;}
+.sensor-val{font-size:2rem;font-weight:800;font-family:var(--mono);color:var(--text);display:block;line-height:1;}
+.sensor-unit{font-size:.7rem;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-top:.2rem;display:block;}
+.sensor-device{font-size:.72rem;color:var(--t2);margin-top:.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* MOUNTAINS */
+.mountain-grid{display:flex;flex-direction:column;gap:.75rem;}
+.mountain-item{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:all .2s;}
+.mountain-item:hover{border-color:var(--accent);transform:translateX(3px);}
+.mountain-icon{font-size:1.8rem;flex-shrink:0;}
+.mountain-info{flex:1;min-width:0;}
+.mountain-name{font-size:.92rem;font-weight:700;margin-bottom:.2rem;}
+.mountain-meta{font-size:.73rem;color:var(--t2);display:flex;gap:.75rem;flex-wrap:wrap;}
+.mountain-stats{text-align:right;flex-shrink:0;}
+.mountain-stats .peak{font-size:1rem;font-weight:800;font-family:var(--mono);color:var(--accent);}
+.mountain-stats .gain{font-size:.72rem;color:var(--t3);}
+.mountain-elev-mini{width:120px;height:36px;display:block;}
+.add-mountain-bar{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.25rem;}
+/* TCX EXPORT */
+.export-bar{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;}
+.btn-strava{background:#FC4C02;color:#fff;border:none;border-radius:8px;padding:.6rem 1.1rem;font-family:var(--sans);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .2s;}
+.btn-strava:hover{background:#e04400;}
+.btn-garmin{background:#007CC3;color:#fff;border:none;border-radius:8px;padding:.6rem 1.1rem;font-family:var(--sans);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .2s;}
+.btn-garmin:hover{background:#006aaa;}
+.btn-tp{background:#4A90D9;color:#fff;border:none;border-radius:8px;padding:.6rem 1.1rem;font-family:var(--sans);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .2s;}
+.btn-tp:hover{background:#3a7bc2;}
+nav{display:flex;gap:.3rem;}
+nav button{background:none;border:none;color:var(--t2);font-family:var(--sans);font-size:.82rem;font-weight:500;padding:.4rem .8rem;border-radius:6px;cursor:pointer;transition:all .2s;}
+nav button:hover{color:var(--text);background:var(--s2);}
+nav button.active{color:var(--accent);background:var(--adim);}
+main{max-width:1280px;margin:0 auto;padding:1.5rem;}
+.panel{display:none;}.panel.active{display:block;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.card-title{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:1rem;}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:2.5rem 2rem;text-align:center;cursor:pointer;transition:all .25s;background:var(--s2);position:relative;overflow:hidden;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--adim);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-zone h3{font-size:1rem;font-weight:700;margin-bottom:.4rem;}
+.upload-zone p{font-size:.83rem;color:var(--t2);}
+.upload-zone small{font-size:.73rem;color:var(--t3);margin-top:.4rem;display:block;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.2rem;border-radius:8px;font-family:var(--sans);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;border:none;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2);}
+.btn-outline:hover{background:var(--s2);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-danger:hover{background:#dc2626;}
+.btn-row{display:flex;gap:.6rem;flex-wrap:wrap;}
+
+/* STATS GRID */
+.route-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:1.25rem;}
+@media(max-width:640px){.route-stats{grid-template-columns:repeat(2,1fr);}}
+.stat-box{background:var(--s2);border-radius:8px;padding:.9rem;text-align:center;}
+.stat-box .val{font-size:1.4rem;font-weight:800;font-family:var(--mono);color:var(--accent);display:block;}
+.stat-box .lbl{font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-top:.2rem;display:block;}
+
+/* TRAINER STATUS */
+.trainer-status{display:flex;align-items:center;gap:1.25rem;padding:1rem 1.25rem;background:var(--s2);border-radius:10px;margin-bottom:1.25rem;border:1px solid var(--border);}
+.status-dot{width:11px;height:11px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:background .3s;}
+.status-dot.connected{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+.status-dot.connecting{background:var(--warn);animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.status-info{flex:1;}
+.status-info strong{font-size:.9rem;display:block;}
+.status-info small{font-size:.75rem;color:var(--t2);}
+
+/* METRICS */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.25rem;}
+@media(max-width:640px){.metrics-grid{grid-template-columns:repeat(2,1fr);}}
+.metric-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1.1rem .9rem;text-align:center;position:relative;overflow:hidden;transition:border-color .3s;}
+.metric-card.zone-1{border-top:3px solid var(--z1);}
+.metric-card.zone-2{border-top:3px solid var(--z2);}
+.metric-card.zone-3{border-top:3px solid var(--z3);}
+.metric-card.zone-4{border-top:3px solid var(--z4);}
+.metric-card.zone-5{border-top:3px solid var(--z5);}
+.metric-card.zone-6{border-top:3px solid var(--z6);}
+.metric-val{font-size:2rem;font-weight:800;font-family:var(--mono);color:var(--text);line-height:1;display:block;margin-bottom:.25rem;transition:color .3s;}
+.metric-val.accent{color:var(--accent);}
+.metric-unit{font-size:.7rem;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;}
+
+/* POWER ZONE BADGE */
+.zone-badge{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-top:.35rem;letter-spacing:.05em;}
+
+/* SLOPE */
+.slope-wrap{background:var(--s2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;border:1px solid var(--border);}
+.slope-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.slope-header span{font-size:.75rem;color:var(--t2);}
+.slope-header strong{font-size:1.1rem;font-family:var(--mono);color:var(--text);}
+.slope-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.slope-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .5s ease,background .3s;}
+
+/* PROGRESS */
+.prog-wrap{margin-bottom:1.25rem;}
+.prog-labels{display:flex;justify-content:space-between;font-size:.75rem;color:var(--t2);margin-bottom:.4rem;}
+.prog-track{height:5px;background:var(--s2);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;transition:width .8s ease;width:0%;}
+
+/* CANVASES */
+#elevation-canvas,#live-canvas{width:100%;display:block;}
+#elevation-canvas{height:150px;}
+#live-canvas{height:90px;border-radius:8px;}
+
+/* MAP */
+#map{height:320px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+.leaflet-container{background:#0d1117!important;}
+
+/* SESSION TIMER */
+#session-timer{font-family:var(--mono);font-size:2.3rem;font-weight:800;letter-spacing:-.02em;color:var(--accent);}
+
+/* POWER ZONES PANEL */
+.zones-list{display:flex;flex-direction:column;gap:.5rem;}
+.zone-row{display:flex;align-items:center;gap:1rem;padding:.7rem 1rem;border-radius:8px;background:var(--s2);border:1px solid var(--border);transition:all .3s;}
+.zone-row.active-zone{border-color:var(--border2);background:var(--s3);}
+.zone-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.zone-name{font-size:.85rem;font-weight:700;min-width:80px;}
+.zone-range{font-size:.78rem;color:var(--t2);font-family:var(--mono);min-width:120px;}
+.zone-desc{font-size:.75rem;color:var(--t3);flex:1;}
+.zone-bar-wrap{width:80px;background:var(--bg);border-radius:4px;height:6px;overflow:hidden;}
+.zone-bar-inner{height:100%;border-radius:4px;transition:width 1s ease;}
+
+/* HISTORY */
+.history-empty{text-align:center;padding:3rem 2rem;color:var(--t3);}
+.history-empty span{font-size:2.5rem;display:block;margin-bottom:.75rem;}
+.session-list{display:flex;flex-direction:column;gap:.6rem;}
+.session-item{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.9rem;cursor:pointer;transition:all .2s;}
+.session-item:hover{border-color:var(--border2);transform:translateX(3px);}
+.session-date{font-family:var(--mono);font-size:.75rem;color:var(--t3);min-width:75px;}
+.session-name{flex:1;font-weight:700;font-size:.9rem;}
+.session-stats{display:flex;gap:1.2rem;}
+.session-stat .v{font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--accent);}
+.session-stat .u{font-size:.65rem;color:var(--t3);}
+
+/* MODAL POST-SESSION */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;padding:2rem;}
+.modal-title{font-size:1.3rem;font-weight:800;margin-bottom:1.5rem;color:var(--accent);}
+.modal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem;}
+.modal-stat{background:var(--s2);border-radius:8px;padding:.9rem;text-align:center;}
+.modal-stat .v{font-size:1.4rem;font-weight:800;font-family:var(--mono);display:block;}
+.modal-stat .u{font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-top:.15rem;display:block;}
+.chart-wrap{position:relative;height:200px;margin-bottom:1.5rem;}
+
+/* ALERT */
+.alert{padding:.8rem 1rem;border-radius:8px;font-size:.82rem;margin-bottom:1rem;line-height:1.5;}
+.alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fbbf24;}
+.alert-info{background:var(--adim);border:1px solid rgba(0,229,160,.25);color:var(--accent);}
+
+/* CONFIG */
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+@media(max-width:600px){.setup-grid{grid-template-columns:1fr;}}
+label{font-size:.75rem;color:var(--t2);display:block;margin-bottom:.35rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;}
+input[type=number],input[type=text],select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.95rem;padding:.55rem .85rem;outline:none;transition:border-color .2s;}
+input:focus,select:focus{border-color:var(--accent);}
+select option{background:var(--surface);}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:.85rem 1.3rem;font-size:.85rem;color:var(--text);z-index:1000;transform:translateY(80px);opacity:0;transition:all .3s;max-width:280px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:var(--accent);}
+.toast.error{border-color:var(--danger);}
+
+/* TWO-COL LAYOUT */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">In<span>Track</span> <small>v5</small></div>
+  <nav>
+    <button class="active" onclick="showPanel('ruta')">🗺️ Ruta</button>
+    <button onclick="showPanel('entrena')">🚴 Entrenar</button>
+    <button onclick="showPanel('sensores')">📡 Sensores</button>
+    <button onclick="showPanel('montanas')">⛰️ Montañas</button>
+    <button onclick="showPanel('zonas')">⚡ Zonas</button>
+    <button onclick="showPanel('historial')">📊 Historial</button>
+    <button onclick="showPanel('config')">⚙️ Config</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ════════════════ PANEL RUTA ════════════════ -->
+<div class="panel active" id="panel-ruta">
+
+  <!-- STRAVA CONNECT / PROFILE -->
+  <div id="strava-disconnected" class="card">
+    <div class="card-title">🟠 Conectar con Strava</div>
+    <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">
+        <p style="font-size:.88rem;color:var(--t2);line-height:1.7;margin-bottom:1rem;">
+          Conecta tu cuenta de Strava para importar directamente tus <strong style="color:var(--text)">actividades realizadas</strong> y tus <strong style="color:var(--text)">rutas guardadas</strong> — sin exportar archivos manualmente.
+        </p>
+        <button class="strava-btn" onclick="stravaLogin()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+          Conectar con Strava
+        </button>
+        <div style="margin-top:.75rem;">
+          <div class="setup-notice">
+            <strong>⚙️ Configuración necesaria (una sola vez)</strong><br>
+            1. Ve a <code>developers.strava.com</code> → "Create & Manage Your App"<br>
+            2. Crea una app gratuita — Authorization Callback Domain: <code>localhost</code><br>
+            3. Copia tu <strong>Client ID</strong> y pégalo abajo:<br><br>
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+              <input type="text" id="strava-client-id" placeholder="Client ID (ej: 12345)" style="width:160px;background:var(--s3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:.85rem;padding:.4rem .7rem;outline:none;"/>
+              <button class="btn btn-primary" style="padding:.4rem .9rem;font-size:.8rem" onclick="saveClientId()">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;">
+        <div style="background:var(--s2);border-radius:10px;padding:1rem;font-size:.78rem;color:var(--t3);line-height:1.8;min-width:200px;">
+          <div style="color:var(--t2);font-weight:700;margin-bottom:.5rem;">Permisos solicitados</div>
+          <div>✓ Leer actividades</div>
+          <div>✓ Leer rutas guardadas</div>
+          <div>✓ Exportar GPX/streams</div>
+          <div style="margin-top:.5rem;color:var(--t3);">✗ No escribe ni modifica nada</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRAVA CONNECTED PROFILE -->
+  <div id="strava-connected" style="display:none">
+    <div class="strava-connected">
+      <img id="strava-avatar" class="strava-avatar" src="" alt=""/>
+      <div class="strava-info">
+        <strong id="strava-athlete-name">—</strong>
+        <small id="strava-athlete-stats">Cargando estadísticas…</small>
+      </div>
+      <button class="btn btn-outline" style="font-size:.78rem;padding:.35rem .8rem" onclick="stravaLogout()">Desconectar</button>
+      <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .8rem" onclick="stravaRefresh()">🔄 Actualizar</button>
+    </div>
+
+    <!-- SEARCH -->
+    <input class="search-input" id="strava-search" placeholder="🔍 Buscar ruta o actividad por nombre…" oninput="filterStravaList()"/>
+
+    <!-- TABS: Actividades / Rutas / Habituales -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-actividades" onclick="switchTab('actividades')">🚴 Actividades recientes</button>
+      <button class="tab-btn" id="tab-rutas" onclick="switchTab('rutas')">⭐ Rutas guardadas</button>
+      <button class="tab-btn" id="tab-habituales" onclick="switchTab('habituales')">🔁 Habituales</button>
+    </div>
+
+    <div class="card" style="padding:1rem 1.25rem;">
+      <div id="strava-list-container">
+        <div style="text-align:center;padding:2rem;color:var(--t3);">
+          <div class="loading-spin" style="margin-bottom:.75rem;"></div><br>
+          Cargando desde Strava…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIVIDER: O sube GPX manualmente -->
+  <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;">
+    <div style="flex:1;height:1px;background:var(--border);"></div>
+    <span style="font-size:.75rem;color:var(--t3);white-space:nowrap;">O importa GPX manualmente</span>
+    <div style="flex:1;height:1px;background:var(--border);"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📂 Subir archivo GPX</div>
+    <div class="upload-zone" id="drop-zone">
+      <input type="file" accept=".gpx" id="gpx-input"/>
+      <div style="font-size:2rem;margin-bottom:.6rem;">🗺️</div>
+      <h3>Arrastra tu archivo GPX aquí</h3>
+      <p>O haz clic para buscar</p>
+      <small>Strava → Actividad → ··· → Export GPX</small>
+    </div>
+  </div>
+
+  <!-- ROUTE PREVIEW -->
+  <div class="card" id="route-card" style="display:none">
+    <div class="card-title" id="route-card-title">📈 Perfil de altimetría</div>
+    <canvas id="elevation-canvas"></canvas>
+    <div class="route-stats">
+      <div class="stat-box"><span class="val" id="s-dist">—</span><span class="lbl">Distancia km</span></div>
+      <div class="stat-box"><span class="val" id="s-elev">—</span><span class="lbl">Desnivel + m</span></div>
+      <div class="stat-box"><span class="val" id="s-maxslope">—</span><span class="lbl">Pendiente máx %</span></div>
+      <div class="stat-box"><span class="val" id="s-pts">—</span><span class="lbl">Puntos GPS</span></div>
+    </div>
+    <div style="margin-top:1.25rem" class="btn-row">
+      <button class="btn btn-primary" onclick="showPanel('entrena')">🚴 Ir a entrenar →</button>
+      <button class="btn btn-outline" onclick="clearRoute()">🗑️ Borrar ruta</button>
+      <button class="btn btn-outline" onclick="exportZWO()">💾 Exportar ZWO</button>
+      <button class="btn btn-outline" onclick="exportERG()">💾 Exportar ERG</button>
+    </div>
+  </div>
+
+  <div class="card" id="map-preview-card" style="display:none">
+    <div class="card-title">🗺️ Mapa de la ruta</div>
+    <div id="map-preview"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PANEL ENTRENAR ════════════════ -->
+<div class="panel" id="panel-entrena">
+
+  <!-- TRAINER CONNECTION BAR -->
+  <div class="trainer-status" id="trainer-status">
+    <div class="status-dot" id="status-dot"></div>
+    <div class="status-info">
+      <strong id="status-name">Rodillo no conectado</strong>
+      <small id="status-sub">Conecta tu rodillo por Bluetooth</small>
+    </div>
+    <span class="proto-badge proto-none" id="proto-badge">SIN PROTOCOLO</span>
+    <button class="btn btn-primary" id="btn-connect" onclick="connectTrainer()">🔵 Conectar</button>
+  </div>
+
+  <div class="alert alert-warn" id="ble-warning" style="display:none">
+    ⚠️ Web Bluetooth requiere <strong>Chrome o Edge en PC/Android</strong>.
+  </div>
+  <div class="alert alert-info" id="no-route-warn" style="display:none">
+    ℹ️ Sin ruta. <a href="#" onclick="showPanel('ruta');return false" style="color:inherit;font-weight:700">Importa un GPX o conecta Strava</a> para simular desniveles.
+  </div>
+
+  <!-- ══ PANTALLA PRINCIPAL DE ENTRENAMIENTO ══ -->
+  <div id="training-screen">
+
+    <!-- FILA SUPERIOR: timer + métricas clave -->
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div id="session-timer">00:00:00</div>
+      <div style="flex:1;min-width:0;">
+        <div id="route-name-display" style="font-size:.85rem;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sin ruta</div>
+        <div id="session-mode" style="font-size:.72rem;color:var(--t3);">Modo: Libre</div>
+      </div>
+      <div id="live-zone-badge" class="zone-badge" style="background:var(--s2);color:var(--t2);">—</div>
+    </div>
+
+    <!-- MÉTRICAS EN UNA FILA -->
+    <div class="metrics-grid" style="margin-bottom:1rem;">
+      <div class="metric-card" id="mc-power">
+        <span class="metric-val accent" id="m-power">—</span>
+        <span class="metric-unit">W</span>
+        <div id="power-zone-badge" class="zone-badge" style="background:var(--s3);color:var(--t3);font-size:.6rem;">—</div>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val" id="m-cadence">—</span>
+        <span class="metric-unit">rpm</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val" id="m-speed">—</span>
+        <span class="metric-unit">km/h</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val" id="m-hr">—</span>
+        <span class="metric-unit">bpm</span>
+      </div>
+    </div>
+
+    <!-- PENDIENTE -->
+    <div class="slope-wrap" style="margin-bottom:1rem;">
+      <div class="slope-header">
+        <span>Pendiente</span>
+        <strong id="slope-val">0.0%</strong>
+      </div>
+      <div class="slope-track"><div class="slope-fill" id="slope-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- ══ MAPA CENITAL — mitad superior ══ -->
+    <div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;border:1px solid var(--border);position:relative;">
+      <div id="map-live" style="height:280px;"></div>
+      <!-- Overlay info top-left -->
+      <div style="position:absolute;top:8px;left:8px;background:rgba(10,12,16,.75);border-radius:6px;padding:4px 10px;font-size:.75rem;font-family:var(--mono);color:#fff;pointer-events:none;">
+        <span id="map-dist-label">0.0 km</span> · <span id="map-pct-label">0%</span>
+      </div>
+      <!-- Overlay pendiente top-right -->
+      <div id="map-slope-overlay" style="position:absolute;top:8px;right:8px;background:rgba(10,12,16,.75);border-radius:6px;padding:4px 10px;font-size:.82rem;font-family:var(--mono);font-weight:700;color:var(--accent);pointer-events:none;">
+        0.0%
+      </div>
+    </div>
+
+    <!-- ══ PERFIL DESLIZANTE — ventana ±12km ══ -->
+    <div style="border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);margin-bottom:1rem;position:relative;">
+      <div style="position:absolute;top:8px;left:12px;font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;z-index:1;">Perfil · ventana ±12 km</div>
+      <canvas id="sliding-elev-canvas" style="width:100%;height:160px;display:block;"></canvas>
+      <!-- Etiquetas distancia abajo -->
+      <div style="display:flex;justify-content:space-between;padding:2px 12px 6px;font-size:.68rem;font-family:var(--mono);color:var(--t3);">
+        <span id="elev-label-left">-12 km</span>
+        <span style="color:var(--accent);font-weight:700;" id="elev-label-center">aquí</span>
+        <span id="elev-label-right">+12 km</span>
+      </div>
+    </div>
+
+    <!-- CONTROLES SESIÓN -->
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-start" onclick="startSession()">▶ Iniciar</button>
+      <button class="btn btn-outline" id="btn-pause" onclick="pauseSession()" disabled>⏸ Pausar</button>
+      <button class="btn btn-danger" id="btn-stop" onclick="stopSession()" disabled>⏹ Terminar</button>
+    </div>
+
+    <!-- Live power mini chart -->
+    <div class="card" style="padding:.9rem 1.1rem;margin-top:1rem;">
+      <div class="card-title">⚡ Potencia en tiempo real</div>
+      <div style="position:relative;height:90px;">
+        <canvas id="live-power-chart"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /training-screen -->
+</div>
+
+<!-- ════════════════ PANEL ZONAS ════════════════ -->
+<div class="panel" id="panel-zonas">
+  <div class="card">
+    <div class="card-title">⚡ Zonas de potencia</div>
+    <div style="margin-bottom:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <label>Tu FTP (W)</label>
+        <input type="number" id="zone-ftp" value="200" min="50" max="600" style="width:120px" onchange="renderZones()"/>
+      </div>
+      <div style="font-size:.82rem;color:var(--t2);margin-top:1.2rem;">Basado en el modelo de zonas de Andrew Coggan</div>
+    </div>
+    <div class="zones-list" id="zones-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Cómo usar las zonas</div>
+    <div style="font-size:.85rem;color:var(--t2);line-height:1.8;">
+      Las zonas de potencia son rangos de intensidad calculados a partir de tu FTP (Functional Threshold Power — la potencia máxima que puedes mantener 1 hora).<br><br>
+      <strong style="color:var(--text);">¿Cómo calcular tu FTP?</strong> Haz un test de 20 minutos al máximo esfuerzo sostenible y multiplica la potencia media por 0.95. O usa el test Ramp disponible en muchas apps de entrenamiento.<br><br>
+      Durante los entrenamientos, VeloIndoor muestra automáticamente en qué zona estás trabajando según la potencia recibida del rodillo.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ PANEL HISTORIAL ════════════════ -->
+<div class="panel" id="panel-historial">
+  <div class="card">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>📊 Mis entrenamientos</span>
+      <button class="btn btn-outline" style="padding:.3rem .8rem;font-size:.75rem" onclick="clearHistory()">🗑️ Borrar todo</button>
+    </div>
+    <div id="history-container"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PANEL CONFIG ════════════════ -->
+<div class="panel" id="panel-config">
+  <div class="card">
+    <div class="card-title">👤 Perfil del ciclista</div>
+    <div class="setup-grid">
+      <div><label>Nombre</label><input type="text" id="cfg-name" value="Ciclista"/></div>
+      <div><label>FTP (W)</label><input type="number" id="cfg-ftp" value="200" min="50" max="600"/></div>
+      <div><label>Peso (kg)</label><input type="number" id="cfg-weight" value="75" min="40" max="150"/></div>
+      <div>
+        <label>Rodillo</label>
+        <select id="cfg-trainer">
+          <option value="d100">Van Rysel D100 (6% máx)</option>
+          <option value="d500" selected>Van Rysel D500 (15% máx)</option>
+          <option value="d900">Van Rysel D900 (20% máx)</option>
+          <option value="generic">Otro FTMS genérico</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem">
+      <button class="btn btn-primary" onclick="saveConfig()">💾 Guardar</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔌 Compatibilidad de rodillos — v3</div>
+    <table class="compat-table">
+      <thead><tr><th>Rodillo</th><th>Protocolo</th><th>SIM pendiente</th><th>ERG potencia</th><th>Lectura datos</th></tr></thead>
+      <tbody>
+        <tr><td>Van Rysel D100/D500/D900</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Wahoo KICKR (2018+)</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Wahoo KICKR (pre-2018)</td><td><span class="proto-badge proto-wahoo">WAHOO</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Wahoo KICKR SNAP</td><td><span class="proto-badge proto-wahoo">WAHOO</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Tacx NEO 2T / Flux S</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Elite Direto XR / Suito</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Elite Qubo / Turno (antiguos)</td><td><span class="proto-badge proto-elite">ELITE</span></td><td class="compat-ok">✓</td><td class="compat-partial">~</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Saris H3 / H2</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Bkool Smart Pro</td><td><span class="proto-badge proto-ftms">FTMS</span></td><td class="compat-ok">✓</td><td class="compat-ok">✓</td><td class="compat-ok">✓</td></tr>
+        <tr><td>Rodillo sin control BLE</td><td><span class="proto-badge proto-none">NINGUNO</span></td><td class="compat-no">✗</td><td class="compat-no">✗</td><td class="compat-partial">solo sensor</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:.75rem;color:var(--t3);margin-top:.9rem;">La app detecta el protocolo automáticamente al conectar. Si SIM falla, hace fallback a ERG automáticamente.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">ℹ️ VeloIndoor v3</div>
+    <p style="font-size:.85rem;color:var(--t2);line-height:1.75;">
+      App gratuita y sin suscripción para usar tu rodillo inteligente Van Rysel con tus rutas de Strava.<br><br>
+      <strong style="color:var(--accent);">Nuevo en v3:</strong> Capa de compatibilidad multi-protocolo — FTMS SIM, FTMS ERG, Wahoo propietario, Elite propietario, Cycling Power. Detección automática al conectar con fallback inteligente.<br><br>
+      <span style="color:var(--t3);font-size:.78rem;">Requiere Chrome/Edge en Mac/PC/Android para Bluetooth. Todo se guarda localmente — ningún dato sale de tu dispositivo.</span>
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════ PANEL SENSORES ════════════════ -->
+<div class="panel" id="panel-sensores">
+  <div class="card">
+    <div class="card-title">📡 Periféricos Bluetooth conectados</div>
+    <p style="font-size:.83rem;color:var(--t2);margin-bottom:1.25rem;line-height:1.65;">
+      InTrack puede conectar hasta 4 dispositivos BLE simultáneamente. Si conectas un medidor de potencia externo, sus datos tienen <strong style="color:var(--text)">prioridad sobre el rodillo</strong> — son más precisos. Lo mismo con la banda de FC.
+    </p>
+    <div class="sensor-grid" id="sensor-grid">
+      <!-- Renderizado por JS -->
+    </div>
+    <div class="alert alert-info" style="margin-top:.5rem;">
+      💡 <strong>Prioridad de datos:</strong> Potenciómetro externo > Rodillo FTMS > Estimación · Banda FC > Sensor del rodillo
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Dispositivos compatibles</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.82rem;color:var(--t2);">
+      <div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:.5rem;">⚡ Medidores de potencia</div>
+        <div>· Favero Assioma Duo/Uno</div>
+        <div>· 4iiii Precision</div>
+        <div>· Stages Power</div>
+        <div>· Garmin Rally / Vector</div>
+        <div>· Wahoo Powrlink</div>
+        <div>· Shimano Dura-Ace / Ultegra</div>
+        <div>· Quarq DZero</div>
+      </div>
+      <div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:.5rem;">❤️ Frecuencia cardíaca</div>
+        <div>· Polar H10 / H9</div>
+        <div>· Garmin HRM-Pro / Dual</div>
+        <div>· Wahoo TICKR / TICKR X</div>
+        <div>· Decathlon Dual HR</div>
+        <div>· CooSpo / Magene</div>
+        <div style="margin-top:.75rem;font-weight:700;color:var(--text);">🔄 Cadencia/velocidad</div>
+        <div>· Garmin Speed/Cadence</div>
+        <div>· Wahoo RPM</div>
+        <div>· Cualquier sensor BLE CSC</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ PANEL MONTAÑAS ════════════════ -->
+<div class="panel" id="panel-montanas">
+  <div class="card">
+    <div class="card-title">⛰️ Mis montañas y puertos</div>
+    <p style="font-size:.83rem;color:var(--t2);margin-bottom:1.25rem;line-height:1.65;">
+      Tu colección personal de ascensiones icónicas. Cada puerto guardado tiene su perfil exacto listo para pedalear en el rodillo cuando quieras.
+    </p>
+    <div class="add-mountain-bar">
+      <button class="btn btn-primary" onclick="addMountainFromStrava()">🟠 Añadir desde Strava</button>
+      <button class="btn btn-outline" onclick="document.getElementById('gpx-mountain-input').click()">📂 Subir GPX</button>
+      <button class="btn btn-outline" onclick="addMountainFromSegment()">🔍 Buscar segmento Strava</button>
+      <input type="file" id="gpx-mountain-input" accept=".gpx" style="display:none" onchange="importMountainGPX(event)"/>
+    </div>
+    <div id="mountain-list-container"></div>
+  </div>
+
+  <!-- Búsqueda de segmento -->
+  <div class="card" id="segment-search-card" style="display:none">
+    <div class="card-title">🔍 Buscar segmento de subida en Strava</div>
+    <div style="display:flex;gap:.6rem;margin-bottom:1rem;">
+      <input type="text" id="segment-search-input" placeholder="ej: Angliru, Navacerrada, Alpe d'Huez..." style="flex:1"/>
+      <button class="btn btn-primary" onclick="searchSegments()">Buscar</button>
+      <button class="btn btn-outline" onclick="document.getElementById('segment-search-card').style.display='none'">✕</button>
+    </div>
+    <div id="segment-results"></div>
+  </div>
+
+  <!-- Preview perfil del puerto seleccionado -->
+  <div class="card" id="mountain-preview-card" style="display:none">
+    <div class="card-title" id="mountain-preview-title">📈 Perfil del puerto</div>
+    <canvas id="mountain-preview-canvas" style="width:100%;height:160px;display:block;"></canvas>
+    <div class="route-stats" id="mountain-preview-stats"></div>
+    <div style="margin-top:1.25rem" class="btn-row">
+      <button class="btn btn-primary" onclick="loadMountainAsRoute()">🚴 Entrenar este puerto</button>
+      <button class="btn btn-outline" onclick="saveMountainToCollection()">⭐ Guardar en colección</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ════════════════ MODAL POST-SESIÓN ════════════════ -->
+<div class="modal-overlay" id="post-modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">🏁 Resumen del entrenamiento</div>
+    <div class="modal-stats" id="modal-stats"></div>
+    <div class="card-title" style="margin-bottom:.75rem">⚡ Distribución de potencia por zonas</div>
+    <div style="position:relative;height:180px;margin-bottom:1.5rem;">
+      <canvas id="zone-chart"></canvas>
+    </div>
+    <div class="card-title" style="margin-bottom:.75rem">📈 Potencia durante la sesión</div>
+    <div style="position:relative;height:160px;margin-bottom:1.5rem;">
+      <canvas id="power-chart"></canvas>
+    </div>
+    <div class="card-title" style="margin-bottom:.75rem">❤️ Frecuencia cardíaca</div>
+    <div style="position:relative;height:140px;margin-bottom:1.5rem;">
+      <canvas id="hr-chart"></canvas>
+    </div>
+    <div class="btn-row" style="justify-content:flex-end">
+      <div id="export-bar" class="export-bar" style="flex:1"></div>
+      <button class="btn btn-outline" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  GLOBAL STATE
+// ════════════════════════════════════════════════════════
+let route = null;
+let trainerDevice = null, trainerChars = {};
+let session = null;
+let sessionInterval = null, simInterval = null;
+let sessionStartTime = null, sessionPaused = false;
+let sessionPausedTime = 0, pauseStart = null;
+let routeProgress = 0;
+let history = JSON.parse(localStorage.getItem('veloidoor_history') || '[]');
+let config = JSON.parse(localStorage.getItem('veloidoor_config') || '{"ftp":200,"weight":75,"trainer":"d500"}');
+
+// Maps
+let mapPreview = null, mapLive = null;
+let routePolyline = null, liveMarker = null, livePolyline = null;
+let liveTrail = [];
+
+// Charts
+let livePowerChart = null;
+let livePowerData = [];
+
+// ════════════════════════════════════════════════════════
+//  BLE UUIDs — TODOS LOS PROTOCOLOS
+// ════════════════════════════════════════════════════════
+
+// ── FTMS (estándar Bluetooth SIG) ──────────────────────
+const FTMS_SVC                 = '00001826-0000-1000-8000-00805f9b34fb';
+const FTMS_INDOOR_BIKE_DATA    = '00002ad2-0000-1000-8000-00805f9b34fb';
+const FTMS_CONTROL_POINT       = '00002ad9-0000-1000-8000-00805f9b34fb';
+const FTMS_MACHINE_STATUS      = '00002ada-0000-1000-8000-00805f9b34fb';
+const FTMS_SUPPORTED_RESISTANCE= '00002ad6-0000-1000-8000-00805f9b34fb';
+
+// ── Wahoo (protocolo propietario documentado) ──────────
+const WAHOO_SVC                = 'a026ee01-0a7d-4ab3-97fa-f1500f9feb8b';
+const WAHOO_TRAINER_CHAR       = 'a026e005-0a7d-4ab3-97fa-f1500f9feb8b'; // control
+const WAHOO_TRAINER_DATA       = 'a026e002-0a7d-4ab3-97fa-f1500f9feb8b'; // data notify
+
+// ── Elite (protocolo propietario Sterzo/Misuro) ────────
+const ELITE_SVC                = '347b0001-7635-408b-8918-8ff3949ce592';
+const ELITE_CONTROL_CHAR       = '347b0030-7635-408b-8918-8ff3949ce592';
+const ELITE_DATA_CHAR          = '347b0031-7635-408b-8918-8ff3949ce592';
+
+// ── Cycling Power Service (solo lectura de potencia) ───
+const CYCLING_POWER_SVC        = '00001818-0000-1000-8000-00805f9b34fb';
+const CYCLING_POWER_MEAS       = '00002a63-0000-1000-8000-00805f9b34fb';
+
+// ── Heart Rate ─────────────────────────────────────────
+const HR_SVC                   = '0000180d-0000-1000-8000-00805f9b34fb';
+const HR_MEASUREMENT           = '00002a37-0000-1000-8000-00805f9b34fb';
+
+// Protocolo activo detectado
+// 'ftms-sim' | 'ftms-erg' | 'wahoo' | 'elite' | 'power-only' | null
+let activeProtocol = null;
+
+// ════════════════════════════════════════════════════════
+//  DETECCIÓN AUTOMÁTICA DE PROTOCOLO
+// ════════════════════════════════════════════════════════
+async function detectProtocol(server, deviceName) {
+  const name = (deviceName||'').toLowerCase();
+  let protocol = null;
+
+  // 1) Intentar FTMS (prioridad máxima — estándar oficial)
+  try {
+    const svc = await server.getPrimaryService(FTMS_SVC);
+    // Comprobar si soporta control de simulación
+    let hasControl = false;
+    try { await svc.getCharacteristic(FTMS_CONTROL_POINT); hasControl = true; } catch(e){}
+    let hasData = false;
+    try {
+      const ib = await svc.getCharacteristic(FTMS_INDOOR_BIKE_DATA);
+      await ib.startNotifications();
+      ib.addEventListener('characteristicvaluechanged', handleIBD);
+      trainerChars.ibData = ib;
+      hasData = true;
+    } catch(e){}
+    if(hasControl) {
+      const ctrl = await svc.getCharacteristic(FTMS_CONTROL_POINT);
+      trainerChars.control = ctrl;
+      // Verificar si soporta modo SIM escribiendo request control
+      try {
+        await ctrl.writeValue(new Uint8Array([0x00])); // Request control
+        protocol = 'ftms-sim';
+      } catch(e) {
+        protocol = hasData ? 'ftms-erg' : 'ftms-sim';
+      }
+    } else if(hasData) {
+      protocol = 'power-only';
+    }
+  } catch(e) {}
+
+  // 2) Si no hay FTMS, intentar Wahoo
+  if(!protocol) {
+    try {
+      const svc = await server.getPrimaryService(WAHOO_SVC);
+      try {
+        const ctrl = await svc.getCharacteristic(WAHOO_TRAINER_CHAR);
+        trainerChars.wahooControl = ctrl;
+      } catch(e){}
+      try {
+        const data = await svc.getCharacteristic(WAHOO_TRAINER_DATA);
+        await data.startNotifications();
+        data.addEventListener('characteristicvaluechanged', handleWahooData);
+        trainerChars.wahooData = data;
+      } catch(e){}
+      if(trainerChars.wahooControl || trainerChars.wahooData) protocol = 'wahoo';
+    } catch(e) {}
+  }
+
+  // 3) Si no, intentar Elite
+  if(!protocol) {
+    try {
+      const svc = await server.getPrimaryService(ELITE_SVC);
+      try {
+        const ctrl = await svc.getCharacteristic(ELITE_CONTROL_CHAR);
+        trainerChars.eliteControl = ctrl;
+      } catch(e){}
+      try {
+        const data = await svc.getCharacteristic(ELITE_DATA_CHAR);
+        await data.startNotifications();
+        data.addEventListener('characteristicvaluechanged', handleEliteData);
+      } catch(e){}
+      if(trainerChars.eliteControl) protocol = 'elite';
+    } catch(e) {}
+  }
+
+  // 4) Cycling Power Service (solo lectura)
+  if(!protocol) {
+    try {
+      const svc = await server.getPrimaryService(CYCLING_POWER_SVC);
+      const meas = await svc.getCharacteristic(CYCLING_POWER_MEAS);
+      await meas.startNotifications();
+      meas.addEventListener('characteristicvaluechanged', handleCyclingPower);
+      protocol = 'power-only';
+    } catch(e) {}
+  }
+
+  // Siempre intentar HR (servicio secundario)
+  try {
+    const hrSvc = await server.getPrimaryService(HR_SVC);
+    const hrC = await hrSvc.getCharacteristic(HR_MEASUREMENT);
+    await hrC.startNotifications();
+    hrC.addEventListener('characteristicvaluechanged', handleHR);
+  } catch(e) {}
+
+  return protocol;
+}
+
+// ════════════════════════════════════════════════════════
+//  CONNECT — detección automática
+// ════════════════════════════════════════════════════════
+
+// Power zones (Coggan model)
+const ZONE_DEFS = [
+  { name:'Z1 Recuperación', pct:[0,0.55],   color:'#64748b', desc:'Recuperación activa — muy baja intensidad' },
+  { name:'Z2 Resistencia',  pct:[0.55,0.75], color:'#22c55e', desc:'Base aeróbica — puedes hablar con facilidad' },
+  { name:'Z3 Tempo',        pct:[0.75,0.90], color:'#eab308', desc:'Ritmo sostenido — conversación difícil' },
+  { name:'Z4 Umbral',       pct:[0.90,1.05], color:'#f97316', desc:'Cerca del FTP — esfuerzo alto' },
+  { name:'Z5 VO2max',       pct:[1.05,1.20], color:'#ef4444', desc:'Intervalos de alta intensidad' },
+  { name:'Z6 Anaeróbico',   pct:[1.20,99],   color:'#a855f7', desc:'Sprints — esfuerzo máximo' },
+];
+
+// ════════════════════════════════════════════════════════
+//  NAV
+// ════════════════════════════════════════════════════════
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach((b,i)=>{
+    b.classList.toggle('active',['ruta','entrena','sensores','montanas','zonas','historial','config'][i]===id);
+  });
+  document.getElementById('panel-'+id).classList.add('active');
+  if(id==='historial') renderHistory();
+  if(id==='entrena') checkEntrena();
+  if(id==='zonas') renderZones();
+  if(id==='ruta' && route) setTimeout(()=>{ drawElevation(); if(mapPreview) mapPreview.invalidateSize(); },100);
+  if(id==='sensores') renderSensorsPanel();
+  if(id==='montanas') renderMountainsPanel();
+}
+
+// ════════════════════════════════════════════════════════
+//  GPX
+// ════════════════════════════════════════════════════════
+document.getElementById('gpx-input').addEventListener('change',e=>{
+  if(e.target.files[0]) readGPX(e.target.files[0]);
+});
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if(f&&f.name.endsWith('.gpx')) readGPX(f);
+  else showToast('Solo archivos .gpx','error');
+});
+
+function readGPX(file) {
+  const r = new FileReader();
+  r.onload = e => { try { parseGPX(e.target.result, file.name); } catch(err) { showToast('Error GPX: '+err.message,'error'); } };
+  r.readAsText(file);
+}
+
+function haversine(la1,lo1,la2,lo2) {
+  const R=6371000, dLa=(la2-la1)*Math.PI/180, dLo=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function parseGPX(text, filename) {
+  const doc = new DOMParser().parseFromString(text,'text/xml');
+  const trkpts = doc.querySelectorAll('trkpt');
+  if(trkpts.length<2) throw new Error('GPX sin puntos de ruta.');
+  const points=[]; let dist=0,elevGain=0,maxSlope=0,prev=null;
+  trkpts.forEach(pt=>{
+    const lat=parseFloat(pt.getAttribute('lat')),lon=parseFloat(pt.getAttribute('lon'));
+    const eleEl=pt.querySelector('ele'); const ele=eleEl?parseFloat(eleEl.textContent):0;
+    let d=0;
+    if(prev){
+      d=haversine(prev.lat,prev.lon,lat,lon); dist+=d;
+      const dE=ele-prev.ele; if(dE>0) elevGain+=dE;
+      if(d>0){ const sl=Math.abs((dE/d)*100); if(sl<30) maxSlope=Math.max(maxSlope,sl); }
+    }
+    points.push({lat,lon,ele,dist:dist/1000,d});
+    prev={lat,lon,ele};
+  });
+  route={name:filename.replace('.gpx','').replace(/_/g,' '),points,totalDist:dist/1000,elevGain:Math.round(elevGain),maxSlope:Math.round(maxSlope*10)/10,filename};
+  document.getElementById('s-dist').textContent=route.totalDist.toFixed(1);
+  document.getElementById('s-elev').textContent=route.elevGain;
+  document.getElementById('s-maxslope').textContent=route.maxSlope+'%';
+  document.getElementById('s-pts').textContent=points.length;
+  document.getElementById('route-card').style.display='block';
+  document.getElementById('map-preview-card').style.display='block';
+  drawElevation();
+  initMapPreview();
+  showToast('✅ Ruta cargada: '+route.name,'success');
+}
+
+function clearRoute() {
+  route=null;
+  document.getElementById('route-card').style.display='none';
+  document.getElementById('map-preview-card').style.display='none';
+  document.getElementById('gpx-input').value='';
+  showToast('Ruta eliminada');
+}
+
+// ════════════════════════════════════════════════════════
+//  ELEVATION CHART (Canvas)
+// ════════════════════════════════════════════════════════
+function drawElevation(progressIdx=-1) {
+  if(!route) return;
+  const canvas=document.getElementById('elevation-canvas');
+  const ctx=canvas.getContext('2d');
+  const dpr=devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr; canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight,pad=20;
+  const pts=route.points, eles=pts.map(p=>p.ele);
+  const minE=Math.min(...eles), maxE=Math.max(...eles);
+  const xf=i=>(pts[i].dist/route.totalDist)*(W-pad*2)+pad;
+  const yf=e=>H-pad-((e-minE)/(maxE-minE+1))*(H-pad*2);
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(0,229,160,.35)'); grad.addColorStop(1,'rgba(0,229,160,.02)');
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(pts[0].ele));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(xf(i),yf(pts[i].ele));
+  ctx.lineTo(xf(pts.length-1),H); ctx.lineTo(xf(0),H); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(pts[0].ele));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(xf(i),yf(pts[i].ele));
+  ctx.strokeStyle='#00e5a0'; ctx.lineWidth=2; ctx.stroke();
+  if(progressIdx>0&&progressIdx<pts.length){
+    ctx.beginPath(); ctx.arc(xf(progressIdx),yf(pts[progressIdx].ele),6,0,Math.PI*2);
+    ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#00e5a0'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+
+function drawLiveElevation(idx) {
+  if(!route) return;
+  const canvas=document.getElementById('live-canvas');
+  const ctx=canvas.getContext('2d');
+  const dpr=devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr; canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight,pad=6;
+  const pts=route.points, eles=pts.map(p=>p.ele);
+  const minE=Math.min(...eles), maxE=Math.max(...eles);
+  const xf=i=>(pts[i].dist/route.totalDist)*(W-pad*2)+pad;
+  const yf=e=>H-pad-((e-minE)/(maxE-minE+1))*(H-pad*2);
+  ctx.clearRect(0,0,W,H);
+  // completed fill
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(pts[0].ele));
+  for(let i=1;i<=idx;i++) ctx.lineTo(xf(i),yf(pts[i].ele));
+  ctx.lineTo(xf(idx),H); ctx.lineTo(xf(0),H); ctx.closePath();
+  ctx.fillStyle='rgba(0,229,160,.18)'; ctx.fill();
+  // full line
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(pts[0].ele));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(xf(i),yf(pts[i].ele));
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1.5; ctx.stroke();
+  // done line
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(pts[0].ele));
+  for(let i=1;i<=idx;i++) ctx.lineTo(xf(i),yf(pts[i].ele));
+  ctx.strokeStyle='#00e5a0'; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(xf(idx),yf(pts[idx].ele),4,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+}
+
+// ════════════════════════════════════════════════════════
+//  SLIDING ELEVATION WINDOW — ventana ±12 km centrada en posición actual
+// ════════════════════════════════════════════════════════
+const WINDOW_KM = 12; // km a cada lado
+
+function drawSlidingElevation(currentIdx) {
+  if(!route) return;
+  const canvas = document.getElementById('sliding-elev-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  const pts = route.points;
+  const currentDist = pts[currentIdx].dist; // km
+
+  // Ventana: currentDist ± WINDOW_KM
+  const winStart = currentDist - WINDOW_KM;
+  const winEnd   = currentDist + WINDOW_KM;
+
+  // Filtrar puntos en la ventana (con margen)
+  const visible = pts.filter(p => p.dist >= winStart - 0.5 && p.dist <= winEnd + 0.5);
+  if(visible.length < 2) return;
+
+  const eles  = visible.map(p => p.ele);
+  const minE  = Math.min(...eles);
+  const maxE  = Math.max(...eles);
+  const rangeE = maxE - minE || 1;
+
+  const pad = { top: 28, bottom: 12, left: 8, right: 8 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top  - pad.bottom;
+
+  // Conversión coordenadas
+  const xf = dist => pad.left + ((dist - winStart) / (WINDOW_KM * 2)) * plotW;
+  const yf = ele  => pad.top  + plotH - ((ele - minE) / rangeE) * plotH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Zonas de color por pendiente ──────────────────────
+  for(let i = 1; i < visible.length; i++) {
+    const p0 = visible[i-1], p1 = visible[i];
+    const dD = (p1.dist - p0.dist) * 1000;
+    const dE = p1.ele - p0.ele;
+    const slope = dD > 0 ? (dE / dD) * 100 : 0;
+    const col = slope < -2 ? 'rgba(59,130,246,0.35)' :
+                slope <  2 ? 'rgba(34,197,94,0.25)'  :
+                slope <  5 ? 'rgba(234,179,8,0.35)'  :
+                slope <  9 ? 'rgba(249,115,22,0.45)' :
+                             'rgba(239,68,68,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(xf(p0.dist), yf(p0.ele));
+    ctx.lineTo(xf(p1.dist), yf(p1.ele));
+    ctx.lineTo(xf(p1.dist), H - pad.bottom);
+    ctx.lineTo(xf(p0.dist), H - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = col;
+    ctx.fill();
+  }
+
+  // ── Línea de perfil ───────────────────────────────────
+  ctx.beginPath();
+  ctx.moveTo(xf(visible[0].dist), yf(visible[0].ele));
+  for(let i = 1; i < visible.length; i++) {
+    ctx.lineTo(xf(visible[i].dist), yf(visible[i].ele));
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth   = 2.5;
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+
+  // ── Parte ya recorrida (más opaca) ───────────────────
+  const pastPts = visible.filter(p => p.dist <= currentDist);
+  if(pastPts.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(xf(pastPts[0].dist), yf(pastPts[0].ele));
+    for(let i = 1; i < pastPts.length; i++) ctx.lineTo(xf(pastPts[i].dist), yf(pastPts[i].ele));
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  // ── Línea vertical "estás aquí" ───────────────────────
+  const cx = xf(currentDist);
+  ctx.beginPath();
+  ctx.moveTo(cx, pad.top);
+  ctx.lineTo(cx, H - pad.bottom);
+  ctx.strokeStyle = 'rgba(0,229,160,0.6)';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Punto posición actual ─────────────────────────────
+  const cy = yf(pts[currentIdx].ele);
+  // Halo
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,229,160,0.25)';
+  ctx.fill();
+  // Punto
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#00e5a0';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // ── Cotas de altitud en el punto actual ──────────────
+  const eleText = Math.round(pts[currentIdx].ele) + ' m';
+  ctx.font = `bold ${11 * dpr / dpr}px monospace`;
+  ctx.fillStyle = '#00e5a0';
+  ctx.fillText(eleText, cx + 10, cy - 4);
+
+  // ── Marcas de distancia cada 5 km ────────────────────
+  ctx.font = `${10 * dpr / dpr}px monospace`;
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  for(let d = Math.ceil((winStart)/5)*5; d <= winEnd; d += 5) {
+    if(Math.abs(d - currentDist) < 1) continue;
+    const x = xf(d);
+    if(x < pad.left || x > W - pad.right) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, H - pad.bottom);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillText((d).toFixed(0)+'km', x - 10, H - 2);
+  }
+
+  // ── Etiquetas laterales ───────────────────────────────
+  const leftKm  = currentDist - WINDOW_KM;
+  const rightKm = currentDist + WINDOW_KM;
+  const el = document.getElementById('elev-label-left');
+  const er = document.getElementById('elev-label-right');
+  const ec = document.getElementById('elev-label-center');
+  if(el) el.textContent = leftKm >= 0 ? leftKm.toFixed(1)+' km' : '—';
+  if(er) er.textContent = rightKm <= route.totalDist ? rightKm.toFixed(1)+' km' : route.totalDist.toFixed(1)+' km';
+  if(ec) ec.textContent = currentDist.toFixed(2)+' km';
+
+  // Actualizar overlay del mapa
+  const so = document.getElementById('map-slope-overlay');
+  if(so && currentIdx > 0) {
+    const p0 = pts[currentIdx-1], p1 = pts[currentIdx];
+    const dD = (p1.dist - p0.dist) * 1000;
+    const dE = p1.ele - p0.ele;
+    const sl = dD > 0 ? (dE/dD)*100 : 0;
+    so.textContent = sl.toFixed(1) + '%';
+    so.style.color = Math.abs(sl) < 2 ? 'var(--accent)' : Math.abs(sl) < 6 ? '#f59e0b' : '#ef4444';
+  }
+  const ml = document.getElementById('map-dist-label');
+  const mp = document.getElementById('map-pct-label');
+  if(ml) ml.textContent = currentDist.toFixed(2)+' km';
+  if(mp) mp.textContent = Math.round((currentDist / route.totalDist)*100)+'%';
+}
+
+// ════════════════════════════════════════════════════════
+//  LEYENDA COLOR PENDIENTES (para referencia)
+// ════════════════════════════════════════════════════════
+// Azul: bajada >2% | Verde: llano | Amarillo: 2-5% | Naranja: 5-9% | Rojo: >9%
+function initMapPreview() {
+  if(!route) return;
+  const el = document.getElementById('map-preview');
+  el.style.height = '300px';
+  if(mapPreview) { mapPreview.remove(); mapPreview=null; }
+  mapPreview = L.map('map-preview', { zoomControl:true, attributionControl:false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(mapPreview);
+  const latlngs = route.points.map(p=>[p.lat,p.lon]);
+  L.polyline(latlngs,{color:'#00e5a0',weight:3,opacity:.85}).addTo(mapPreview);
+  // Start/end markers
+  L.circleMarker(latlngs[0],{radius:7,color:'#00e5a0',fillColor:'#00e5a0',fillOpacity:1}).bindTooltip('Inicio').addTo(mapPreview);
+  L.circleMarker(latlngs[latlngs.length-1],{radius:7,color:'#f97316',fillColor:'#f97316',fillOpacity:1}).bindTooltip('Final').addTo(mapPreview);
+  mapPreview.fitBounds(L.polyline(latlngs).getBounds(), {padding:[20,20]});
+}
+
+function initMapLive() {
+  if(!route) return;
+  const el = document.getElementById('map-live');
+  if(mapLive) { mapLive.remove(); mapLive=null; liveMarker=null; livePolyline=null; liveTrail=[]; }
+  mapLive = L.map('map-live', { zoomControl:false, attributionControl:false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(mapLive);
+  const latlngs = route.points.map(p=>[p.lat,p.lon]);
+  // Full route (dim)
+  L.polyline(latlngs,{color:'rgba(255,255,255,0.12)',weight:2}).addTo(mapLive);
+  // Completed trail
+  livePolyline = L.polyline([],{color:'#00e5a0',weight:3}).addTo(mapLive);
+  // Position marker (custom)
+  const icon = L.divIcon({html:'<div style="width:14px;height:14px;background:#00e5a0;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px #00e5a0;"></div>',className:'',iconSize:[14,14],iconAnchor:[7,7]});
+  liveMarker = L.marker(latlngs[0],{icon}).addTo(mapLive);
+  mapLive.setView(latlngs[0],15);
+}
+
+function updateLiveMap(idx) {
+  if(!mapLive||!route||!liveMarker) return;
+  const pt = route.points[idx];
+  const ll = [pt.lat,pt.lon];
+  liveMarker.setLatLng(ll);
+  liveTrail.push(ll);
+  livePolyline.setLatLngs(liveTrail);
+  mapLive.setView(ll,15,{animate:true,duration:.5});
+}
+
+// ════════════════════════════════════════════════════════
+//  LIVE POWER CHART
+// ════════════════════════════════════════════════════════
+function initLivePowerChart() {
+  const ctx = document.getElementById('live-power-chart').getContext('2d');
+  if(livePowerChart) { livePowerChart.destroy(); livePowerChart=null; }
+  livePowerData = [];
+  livePowerChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:[], datasets:[{
+      data:[], borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.08)',
+      borderWidth:1.5, fill:true, tension:.3, pointRadius:0
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{display:false},
+        y:{
+          grid:{color:'rgba(255,255,255,.06)'},
+          ticks:{color:'#5a6370',font:{size:10},maxTicksLimit:4},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+
+function pushLivePower(watts) {
+  if(!livePowerChart) return;
+  livePowerData.push(watts);
+  if(livePowerData.length>120) livePowerData.shift();
+  livePowerChart.data.labels = livePowerData.map((_,i)=>i);
+  livePowerChart.data.datasets[0].data = livePowerData;
+  livePowerChart.update('none');
+}
+
+// ════════════════════════════════════════════════════════
+//  POWER ZONES
+// ════════════════════════════════════════════════════════
+function getZone(watts) {
+  const ftp = config.ftp||200;
+  const pct = watts/ftp;
+  const idx = ZONE_DEFS.findIndex(z=>pct>=z.pct[0]&&pct<z.pct[1]);
+  return idx>=0 ? idx : 5;
+}
+
+function renderZones() {
+  const ftp = parseInt(document.getElementById('zone-ftp')?.value || config.ftp || 200);
+  const el = document.getElementById('zones-list');
+  el.innerHTML = ZONE_DEFS.map((z,i)=>{
+    const lo = Math.round(z.pct[0]*ftp), hi = z.pct[1]===99 ? '∞' : Math.round(z.pct[1]*ftp);
+    const range = lo+' – '+hi+' W';
+    return `<div class="zone-row" id="zrow-${i}">
+      <div class="zone-dot" style="background:${z.color}"></div>
+      <div class="zone-name" style="color:${z.color}">${z.name}</div>
+      <div class="zone-range">${range}</div>
+      <div class="zone-desc">${z.desc}</div>
+      <div class="zone-bar-wrap"><div class="zone-bar-inner" style="background:${z.color};width:0%" id="zbar-${i}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function updateZoneDisplay(watts) {
+  if(!watts||isNaN(watts)) return;
+  const zi = getZone(watts);
+  const zd = ZONE_DEFS[zi];
+  const badge = document.getElementById('power-zone-badge');
+  badge.textContent = zd.name;
+  badge.style.background = zd.color+'33';
+  badge.style.color = zd.color;
+  document.getElementById('live-zone-badge').textContent = zd.name;
+  document.getElementById('live-zone-badge').style.background = zd.color+'33';
+  document.getElementById('live-zone-badge').style.color = zd.color;
+  const mc = document.getElementById('mc-power');
+  mc.className = 'metric-card zone-'+(zi+1);
+  mc.style.borderTopColor = zd.color;
+}
+
+// ════════════════════════════════════════════════════════
+//  BLE
+// ════════════════════════════════════════════════════════
+async function connectTrainer() {
+  if(!navigator.bluetooth){ document.getElementById('ble-warning').style.display='block'; showToast('Bluetooth no disponible','error'); return; }
+  const dot=document.getElementById('status-dot'), btn=document.getElementById('btn-connect');
+  dot.className='status-dot connecting';
+  document.getElementById('status-name').textContent='Buscando rodillo…';
+  document.getElementById('status-sub').textContent='Escaneo Bluetooth activo';
+  btn.disabled=true;
+  try {
+    // Aceptamos dispositivos con CUALQUIERA de los servicios conocidos
+    const device = await navigator.bluetooth.requestDevice({
+      filters:[
+        {services:[FTMS_SVC]},
+        {services:[WAHOO_SVC]},
+        {services:[ELITE_SVC]},
+        {services:[CYCLING_POWER_SVC]},
+      ],
+      optionalServices:[
+        FTMS_SVC, WAHOO_SVC, ELITE_SVC, CYCLING_POWER_SVC,
+        HR_SVC, FTMS_MACHINE_STATUS, FTMS_SUPPORTED_RESISTANCE
+      ]
+    });
+
+    document.getElementById('status-name').textContent='Conectando a '+device.name+'…';
+    document.getElementById('status-sub').textContent='Detectando protocolo…';
+    const server = await device.gatt.connect();
+
+    // Auto-detectar protocolo
+    const proto = await detectProtocol(server, device.name);
+    activeProtocol = proto;
+
+    trainerDevice = device;
+    device.addEventListener('gattserverdisconnected', onDisconnect);
+
+    // UI feedback
+    dot.className='status-dot connected';
+    const protoInfo = getProtoInfo(proto);
+    document.getElementById('status-name').textContent = '✅ '+device.name;
+    document.getElementById('status-sub').textContent = protoInfo.label;
+    setProtoBadge(proto);
+    btn.textContent='🔴 Desconectar'; btn.onclick=disconnectTrainer; btn.disabled=false;
+    showToast('¡'+device.name+' · '+protoInfo.short+'!','success');
+
+    if(proto === 'power-only') {
+      showToast('⚠️ Solo lectura de potencia — sin control de pendiente','');
+    }
+  } catch(err) {
+    dot.className='status-dot';
+    document.getElementById('status-name').textContent='Rodillo no conectado';
+    document.getElementById('status-sub').textContent=err.name==='NotFoundError'?'Búsqueda cancelada':err.message;
+    btn.textContent='🔵 Conectar'; btn.onclick=connectTrainer; btn.disabled=false;
+    if(err.name!=='NotFoundError') showToast('Error: '+err.message,'error');
+    setProtoBadge(null);
+  }
+}
+
+function getProtoInfo(proto) {
+  const map = {
+    'ftms-sim': { label:'FTMS · Modo simulación (pendiente real)', short:'FTMS SIM' },
+    'ftms-erg': { label:'FTMS · Modo ERG (control de potencia)', short:'FTMS ERG' },
+    'wahoo':    { label:'Protocolo Wahoo propietario · SIM+ERG', short:'WAHOO' },
+    'elite':    { label:'Protocolo Elite propietario · SIM', short:'ELITE' },
+    'power-only':{ label:'Solo lectura de potencia · sin control', short:'SOLO POT.' },
+  };
+  return map[proto] || { label:'Protocolo desconocido', short:'???' };
+}
+
+function setProtoBadge(proto) {
+  const el = document.getElementById('proto-badge');
+  const classMap = {
+    'ftms-sim':'proto-ftms','ftms-erg':'proto-erg',
+    'wahoo':'proto-wahoo','elite':'proto-elite',
+    'power-only':'proto-erg', null:'proto-none'
+  };
+  const labelMap = {
+    'ftms-sim':'FTMS SIM','ftms-erg':'FTMS ERG',
+    'wahoo':'WAHOO','elite':'ELITE',
+    'power-only':'SOLO POT.', null:'SIN PROTOCOLO'
+  };
+  el.className = 'proto-badge '+(classMap[proto]||'proto-none');
+  el.textContent = labelMap[proto]||'SIN PROTOCOLO';
+}
+
+async function disconnectTrainer() {
+  if(trainerDevice&&trainerDevice.gatt.connected) trainerDevice.gatt.disconnect();
+  onDisconnect();
+}
+
+function onDisconnect() {
+  trainerDevice=null; trainerChars={}; activeProtocol=null;
+  document.getElementById('status-dot').className='status-dot';
+  document.getElementById('status-name').textContent='Rodillo desconectado';
+  document.getElementById('status-sub').textContent='Conecta tu rodillo por Bluetooth';
+  setProtoBadge(null);
+  const btn=document.getElementById('btn-connect');
+  btn.textContent='🔵 Conectar'; btn.onclick=connectTrainer; btn.disabled=false;
+  ['m-power','m-cadence','m-speed','m-hr'].forEach(id=>document.getElementById(id).textContent='—');
+  showToast('Rodillo desconectado');
+}
+
+// ════════════════════════════════════════════════════════
+//  DATA HANDLERS — por protocolo
+// ════════════════════════════════════════════════════════
+
+// ── FTMS Indoor Bike Data (0x2AD2) ─────────────────────
+function handleIBD(evt) {
+  const d=evt.target.value, flags=d.getUint16(0,true);
+  let o=2;
+  if(!(flags&0x0001)){ const spd=d.getUint16(o,true)*0.01; document.getElementById('m-speed').textContent=spd.toFixed(1); o+=2; }
+  if(flags&0x0002) o+=2;
+  if(flags&0x0004){ const cad=d.getUint16(o,true)*0.5; document.getElementById('m-cadence').textContent=Math.round(cad); o+=2; }
+  if(flags&0x0008) o+=2;
+  if(flags&0x0010) o+=3;
+  if(flags&0x0020) o+=2;
+  if(flags&0x0040){
+    const pwr=Math.max(0,d.getInt16(o,true));
+    document.getElementById('m-power').textContent=pwr;
+    if(session) session.powerSamples.push({t:Date.now()-sessionStartTime,w:pwr});
+    updateZoneDisplay(pwr); pushLivePower(pwr); o+=2;
+  }
+  if(flags&0x0100) o+=5;
+  if(flags&0x0200){ const hr=d.getUint8(o); document.getElementById('m-hr').textContent=hr; if(session) session.hrSamples.push({t:Date.now()-sessionStartTime,bpm:hr}); }
+}
+
+// ── Wahoo data (formato propietario documentado) ────────
+// Referencia: https://github.com/trainengine/wahoo-fitness-api
+function handleWahooData(evt) {
+  const d = evt.target.value;
+  if(d.byteLength < 1) return;
+  const type = d.getUint8(0);
+  if(type === 0x05 && d.byteLength >= 7) {
+    // Power + cadence + speed packet
+    const pwr = d.getUint16(1, true);
+    const cad = d.getUint16(3, true) / 2;
+    const spd = d.getUint16(5, true) * 3.6 / 1000; // mm/s -> km/h
+    document.getElementById('m-power').textContent = pwr;
+    document.getElementById('m-cadence').textContent = Math.round(cad);
+    document.getElementById('m-speed').textContent = spd.toFixed(1);
+    if(session) session.powerSamples.push({t:Date.now()-sessionStartTime,w:pwr});
+    updateZoneDisplay(pwr); pushLivePower(pwr);
+  }
+}
+
+// ── Elite data ─────────────────────────────────────────
+function handleEliteData(evt) {
+  const d = evt.target.value;
+  if(d.byteLength < 4) return;
+  // Elite Sterzo: byte 0 = type, bytes 1-2 = power (little endian)
+  const type = d.getUint8(0);
+  if(type === 0x01 && d.byteLength >= 5) {
+    const pwr = d.getUint16(1, true);
+    const cad = d.getUint8(3);
+    document.getElementById('m-power').textContent = pwr;
+    document.getElementById('m-cadence').textContent = cad;
+    if(session) session.powerSamples.push({t:Date.now()-sessionStartTime,w:pwr});
+    updateZoneDisplay(pwr); pushLivePower(pwr);
+  }
+}
+
+// ── Cycling Power Measurement (0x2A63) ─────────────────
+function handleCyclingPower(evt) {
+  const d = evt.target.value;
+  const flags = d.getUint16(0, true);
+  const pwr = d.getInt16(2, true);
+  document.getElementById('m-power').textContent = Math.max(0, pwr);
+  if(session) session.powerSamples.push({t:Date.now()-sessionStartTime,w:pwr});
+  updateZoneDisplay(pwr); pushLivePower(pwr);
+  // Cadence from crank revs if present (bit 0)
+  if(flags & 0x0001 && d.byteLength >= 9) {
+    document.getElementById('m-cadence').textContent = '—';
+  }
+}
+
+function handleHR(evt) {
+  const d=evt.target.value, flags=d.getUint8(0);
+  const hr=(flags&0x01)?d.getUint16(1,true):d.getUint8(1);
+  document.getElementById('m-hr').textContent=hr;
+  if(session) session.hrSamples.push({t:Date.now()-sessionStartTime,bpm:hr});
+}
+
+// ════════════════════════════════════════════════════════
+//  SET SLOPE — enrutador multi-protocolo
+// ════════════════════════════════════════════════════════
+async function setSlope(slopePct) {
+  if(!activeProtocol) return;
+  try {
+    switch(activeProtocol) {
+      case 'ftms-sim': return await setSlopeFTMS(slopePct);
+      case 'ftms-erg': return await setErgFromSlopeFTMS(slopePct);
+      case 'wahoo':    return await setSlopeWahoo(slopePct);
+      case 'elite':    return await setSlopeElite(slopePct);
+      case 'power-only': return; // solo lectura
+    }
+  } catch(e) {
+    // Si falla el método principal, intentar fallback ERG
+    if(activeProtocol === 'ftms-sim') {
+      activeProtocol = 'ftms-erg';
+      setProtoBadge('ftms-erg');
+      showToast('SIM no soportado → modo ERG','');
+      await setErgFromSlopeFTMS(slopePct);
+    }
+  }
+}
+
+// ── FTMS Simulation Parameters (opcode 0x11) ──────────
+async function setSlopeFTMS(slopePct) {
+  if(!trainerChars.control) return;
+  await trainerChars.control.writeValue(new Uint8Array([0x00])); // Request Control
+  const grade = Math.round(slopePct * 100); // unidades: 0.01%
+  const buf = new ArrayBuffer(7); const v = new DataView(buf);
+  v.setUint8(0, 0x11);           // Set Indoor Bike Simulation Parameters
+  v.setInt16(1, 0, true);        // Wind speed = 0 m/s (*1000)
+  v.setInt16(3, grade, true);    // Grade (*100)
+  v.setUint8(5, 4);              // Rolling resistance coefficient 0.004
+  v.setUint8(6, 51);             // Wind resistance coefficient 0.51
+  await trainerChars.control.writeValue(new Uint8Array(buf));
+}
+
+// ── FTMS ERG — Set Target Power (opcode 0x05) ─────────
+// Fallback: convierte pendiente a potencia objetivo
+async function setErgFromSlopeFTMS(slopePct) {
+  if(!trainerChars.control) return;
+  const weight = config.weight || 75;
+  const targetWatts = Math.round(estimatePower(slopePct, weight));
+  await trainerChars.control.writeValue(new Uint8Array([0x00])); // Request Control
+  const buf = new ArrayBuffer(3); const v = new DataView(buf);
+  v.setUint8(0, 0x05);                    // Set Target Power
+  v.setInt16(1, targetWatts, true);       // Watts (signed int16)
+  await trainerChars.control.writeValue(new Uint8Array(buf));
+}
+
+// ── Wahoo Set Slope ───────────────────────────────────
+// Protocolo: opcode 0x46, grade en int16 (x100)
+async function setSlopeWahoo(slopePct) {
+  if(!trainerChars.wahooControl) return;
+  const grade = Math.round(slopePct * 100);
+  const buf = new ArrayBuffer(3); const v = new DataView(buf);
+  v.setUint8(0, 0x46);            // Wahoo Set Sim Grade opcode
+  v.setInt16(1, grade, true);
+  await trainerChars.wahooControl.writeValue(new Uint8Array(buf));
+}
+
+// ── Elite Set Slope ───────────────────────────────────
+// Elite usa valor de pendiente en byte como: 0x80 + (pendiente * 2)
+async function setSlopeElite(slopePct) {
+  if(!trainerChars.eliteControl) return;
+  const gradeVal = Math.round(0x80 + slopePct * 2);
+  const clamped = Math.max(0, Math.min(255, gradeVal));
+  await trainerChars.eliteControl.writeValue(new Uint8Array([0x00, clamped, 0x00, 0x00]));
+}
+
+// ════════════════════════════════════════════════════════
+//  SESSION
+// ════════════════════════════════════════════════════════
+function checkEntrena() {
+  document.getElementById('no-route-warn').style.display = route ? 'none' : 'block';
+  if(route) {
+    document.getElementById('route-name-display').textContent = route.name;
+    document.getElementById('session-mode').textContent = 'Modo: Simulación de desniveles';
+    setTimeout(() => {
+      drawSlidingElevation(0);
+      if(!mapLive) initMapLive();
+      else mapLive.invalidateSize();
+    }, 150);
+  } else {
+    document.getElementById('route-name-display').textContent = 'Sin ruta';
+    document.getElementById('session-mode').textContent = 'Modo: Libre';
+  }
+}
+
+function startSession() {
+  session={ name:route?route.name:'Entrenamiento libre', startTime:Date.now(), powerSamples:[], hrSamples:[] };
+  sessionStartTime=Date.now(); sessionPaused=false; sessionPausedTime=0; routeProgress=0; liveTrail=[];
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('btn-pause').disabled=false;
+  document.getElementById('btn-stop').disabled=false;
+  initLivePowerChart();
+  sessionInterval=setInterval(tickSession,1000);
+  if(route){ startRouteSimulation(); initMapLive(); drawSlidingElevation(0); }
+  showToast('¡Sesión iniciada!','success');
+}
+
+function tickSession() {
+  if(sessionPaused) return;
+  const elapsed=Date.now()-sessionStartTime-sessionPausedTime;
+  document.getElementById('session-timer').textContent=formatTime(elapsed);
+}
+
+function pauseSession() {
+  sessionPaused=!sessionPaused;
+  if(sessionPaused){ pauseStart=Date.now(); document.getElementById('btn-pause').textContent='▶ Reanudar'; if(simInterval) clearInterval(simInterval); }
+  else { sessionPausedTime+=Date.now()-pauseStart; document.getElementById('btn-pause').textContent='⏸ Pausar'; if(route) startRouteSimulation(); }
+}
+
+function stopSession() {
+  clearInterval(sessionInterval); clearInterval(simInterval);
+  sessionInterval=null; simInterval=null;
+  const elapsed=Date.now()-sessionStartTime-sessionPausedTime;
+  const pwr=session.powerSamples.map(s=>s.w);
+  const avgPow=pwr.length?Math.round(pwr.reduce((a,b)=>a+b,0)/pwr.length):0;
+  const maxPow=pwr.length?Math.max(...pwr):0;
+  const hrs=session.hrSamples.map(s=>s.bpm);
+  const avgHR=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
+
+  // Zone time distribution
+  const ftp=config.ftp||200;
+  const zoneTimes=new Array(6).fill(0);
+  pwr.forEach(w=>{ const zi=getZone(w); zoneTimes[zi]++; });
+
+  const record={
+    id:Date.now(), name:session.name, date:new Date().toLocaleDateString('es-ES'),
+    duration:formatTime(elapsed), durationMs:elapsed,
+    avgPower:avgPow, maxPower:maxPow, avgHR,
+    distKm:route?route.points[routeProgress]?.dist.toFixed(1)||'—':'—',
+    elevGain:route?route.elevGain:0,
+    powerSamples:pwr.slice(-300), // save last 300 samples max
+    hrSamples:hrs.slice(-300),
+    zoneTimes
+  };
+
+  history.unshift(record);
+  if(history.length>50) history.pop();
+  localStorage.setItem('veloidoor_history',JSON.stringify(history));
+
+  // Reset UI
+  session=null;
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-stop').disabled=true;
+  document.getElementById('btn-pause').textContent='⏸ Pausar';
+  document.getElementById('session-timer').textContent='00:00:00';
+  updateSlopeDisplay(0);
+  if(trainerDevice) setSlope(0);
+
+  showPostModal(record);
+}
+
+// ════════════════════════════════════════════════════════
+//  ROUTE SIMULATION
+// ════════════════════════════════════════════════════════
+function startRouteSimulation() {
+  if(!route) return;
+  simInterval=setInterval(()=>{
+    if(!session||sessionPaused) return;
+    if(routeProgress>=route.points.length-1){ clearInterval(simInterval); showToast('¡Ruta completada! 🎉','success'); return; }
+    routeProgress++;
+    const pt=route.points[routeProgress], prevPt=route.points[routeProgress-1];
+    const dD=(pt.dist-prevPt.dist)*1000, dE=pt.ele-prevPt.ele;
+    let slope=dD>0?(dE/dD)*100:0;
+    const maxS=getMaxSlope(); slope=Math.max(-maxS,Math.min(maxS,slope));
+    setSlope(slope); updateSlopeDisplay(slope);
+    drawSlidingElevation(routeProgress);
+    updateLiveMap(routeProgress);
+  },1000);
+}
+
+function getMaxSlope() {
+  const t=config.trainer||'d500';
+  return t==='d100'?6:t==='d900'?20:15;
+}
+
+function updateSlopeDisplay(slope) {
+  const abs=Math.abs(slope), maxS=getMaxSlope();
+  const pct=Math.min(abs/maxS*100,100);
+  document.getElementById('slope-val').textContent=slope.toFixed(1)+'%';
+  document.getElementById('slope-bar').style.width=pct+'%';
+  document.getElementById('slope-bar').style.background=abs<3?'var(--accent)':abs<7?'#f97316':'#ef4444';
+}
+
+// ════════════════════════════════════════════════════════
+//  POST-SESSION MODAL
+// ════════════════════════════════════════════════════════
+function showPostModal(record) {
+  const modal = document.getElementById('post-modal');
+  modal.style.display='flex';
+
+  document.getElementById('modal-stats').innerHTML=`
+    <div class="modal-stat"><span class="v">${record.duration}</span><span class="u">Tiempo</span></div>
+    <div class="modal-stat"><span class="v">${record.avgPower||'—'}</span><span class="u">Potencia media W</span></div>
+    <div class="modal-stat"><span class="v">${record.maxPower||'—'}</span><span class="u">Potencia máx W</span></div>
+    <div class="modal-stat"><span class="v">${record.avgHR||'—'}</span><span class="u">FC media bpm</span></div>
+    <div class="modal-stat"><span class="v">${record.distKm}</span><span class="u">Distancia km</span></div>
+    <div class="modal-stat"><span class="v">${record.elevGain||'—'}</span><span class="u">Desnivel m</span></div>`;
+
+  // Zone chart
+  setTimeout(()=>{
+    const zCtx=document.getElementById('zone-chart').getContext('2d');
+    new Chart(zCtx,{
+      type:'bar',
+      data:{
+        labels:ZONE_DEFS.map(z=>z.name.split(' ')[0]+' '+z.name.split(' ')[1]),
+        datasets:[{
+          data:record.zoneTimes,
+          backgroundColor:ZONE_DEFS.map(z=>z.color+'aa'),
+          borderColor:ZONE_DEFS.map(z=>z.color),
+          borderWidth:1, borderRadius:4
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{color:'#8892a0',font:{size:11}},grid:{display:false},border:{display:false}},
+          y:{ticks:{color:'#5a6370',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},border:{display:false}}
+        }
+      }
+    });
+
+    // Power chart
+    const pCtx=document.getElementById('power-chart').getContext('2d');
+    const pData=record.powerSamples;
+    new Chart(pCtx,{
+      type:'line',
+      data:{
+        labels:pData.map((_,i)=>i),
+        datasets:[{
+          data:pData, borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.07)',
+          borderWidth:1.5, fill:true, tension:.3, pointRadius:0
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,animation:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{display:false},
+          y:{ticks:{color:'#5a6370',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},border:{display:false}}
+        }
+      }
+    });
+
+    // HR chart
+    const hCtx=document.getElementById('hr-chart').getContext('2d');
+    const hData=record.hrSamples;
+    if(hData.length>0){
+      new Chart(hCtx,{
+        type:'line',
+        data:{
+          labels:hData.map((_,i)=>i),
+          datasets:[{
+            data:hData, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.07)',
+            borderWidth:1.5, fill:true, tension:.3, pointRadius:0
+          }]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,animation:false,
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{display:false},
+            y:{ticks:{color:'#5a6370',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},border:{display:false}}
+          }
+        }
+      });
+    } else {
+      hCtx.fillStyle='#5a6370'; hCtx.font='14px Syne'; hCtx.textAlign='center';
+      hCtx.fillText('Sin datos de FC en esta sesión',hCtx.canvas.width/2/devicePixelRatio,50);
+    }
+  },100);
+}
+
+function closeModal(evt) {
+  if(!evt||evt.target===document.getElementById('post-modal'))
+    document.getElementById('post-modal').style.display='none';
+}
+
+// ════════════════════════════════════════════════════════
+//  HISTORY
+// ════════════════════════════════════════════════════════
+function renderHistory() {
+  const el=document.getElementById('history-container');
+  if(!history.length){ el.innerHTML=`<div class="history-empty"><span>🚴</span>No hay entrenamientos aún.</div>`; return; }
+  el.innerHTML=`<div class="session-list">${history.map(s=>`
+    <div class="session-item" onclick="showSessionDetail(${s.id})">
+      <div class="session-date">${s.date}</div>
+      <div class="session-name">${s.name}</div>
+      <div class="session-stats">
+        <div class="session-stat"><div class="v">${s.duration}</div><div class="u">Tiempo</div></div>
+        <div class="session-stat"><div class="v">${s.avgPower||'—'}</div><div class="u">W avg</div></div>
+        <div class="session-stat"><div class="v">${s.distKm}</div><div class="u">km</div></div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function showSessionDetail(id) {
+  const record=history.find(s=>s.id===id);
+  if(record) showPostModal(record);
+}
+
+function clearHistory() {
+  if(!confirm('¿Borrar todo el historial?')) return;
+  history=[]; localStorage.removeItem('veloidoor_history'); renderHistory();
+  showToast('Historial borrado');
+}
+
+// ════════════════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════════════════
+function exportZWO() {
+  if(!route) return showToast('Sin ruta','error');
+  const ftp=parseInt(config.ftp||200), pts=route.points;
+  let zwo=`<workout_file><author>VeloIndoor</author><name>${route.name}</name><description>GPX to ZWO by VeloIndoor</description><sportType>bike</sportType><workout>\n`;
+  for(let i=1;i<pts.length;i++){
+    const dD=(pts[i].dist-pts[i-1].dist)*1000, dE=pts[i].ele-pts[i-1].ele;
+    const slope=dD>0?(dE/dD)*100:0;
+    const p=estimatePower(slope,config.weight||75);
+    zwo+=`  <SteadyState Duration="10" Power="${(p/ftp).toFixed(3)}"/>\n`;
+  }
+  zwo+=`</workout>\n</workout_file>`;
+  downloadFile(zwo,route.name+'.zwo','text/xml');
+  showToast('ZWO exportado','success');
+}
+
+function exportERG() {
+  if(!route) return showToast('Sin ruta','error');
+  const ftp=parseInt(config.ftp||200), pts=route.points;
+  let erg=`[COURSE HEADER]\nFTP=${ftp}\nMINUTES WATTS\n[END COURSE HEADER]\n[COURSE DATA]\n`;
+  let t=0;
+  for(let i=1;i<pts.length;i++){
+    const dD=(pts[i].dist-pts[i-1].dist)*1000, dE=pts[i].ele-pts[i-1].ele;
+    const slope=dD>0?(dE/dD)*100:0;
+    const p=estimatePower(slope,config.weight||75);
+    erg+=`${(t/60).toFixed(3)}\t${Math.round(p)}\n`; t+=10;
+  }
+  erg+=`[END COURSE DATA]`;
+  downloadFile(erg,route.name+'.erg','text/plain');
+  showToast('ERG exportado','success');
+}
+
+function estimatePower(slope,weight) {
+  const spd=5, g=9.81*weight*(slope/100)*spd, roll=0.004*weight*9.81*spd, aero=0.5*1.2*0.4*0.9*spd**3;
+  return Math.max(50,Math.round(g+roll+aero));
+}
+
+function downloadFile(content,filename,type) {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=filename; a.click();
+}
+
+// ════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════
+function saveConfig() {
+  config={
+    name:document.getElementById('cfg-name').value,
+    ftp:parseInt(document.getElementById('cfg-ftp').value),
+    weight:parseInt(document.getElementById('cfg-weight').value),
+    trainer:document.getElementById('cfg-trainer').value,
+  };
+  localStorage.setItem('veloidoor_config',JSON.stringify(config));
+  const zftp=document.getElementById('zone-ftp');
+  if(zftp) zftp.value=config.ftp;
+  showToast('Configuración guardada ✓','success');
+}
+
+function loadConfig() {
+  if(config.name) document.getElementById('cfg-name').value=config.name;
+  if(config.ftp){ document.getElementById('cfg-ftp').value=config.ftp; const zf=document.getElementById('zone-ftp'); if(zf) zf.value=config.ftp; }
+  if(config.weight) document.getElementById('cfg-weight').value=config.weight;
+  if(config.trainer) document.getElementById('cfg-trainer').value=config.trainer;
+}
+
+// ════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════
+function formatTime(ms) {
+  const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return [h,m,sec].map(n=>String(n).padStart(2,'0')).join(':');
+}
+
+let toastTimeout;
+function showToast(msg,type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+type;
+  clearTimeout(toastTimeout);
+  toastTimeout=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ── INIT ──
+loadConfig();
+if(!navigator.bluetooth) document.getElementById('ble-warning').style.display='block';
+window.addEventListener('resize',()=>{ if(route){ drawElevation(); drawLiveElevation(routeProgress); } });
+stravaInit();
+
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  STRAVA ENGINE — VeloIndoor v4
+//  OAuth implícito (token flow) — funciona sin servidor
+// ════════════════════════════════════════════════════════
+
+const STRAVA_BASE = 'https://www.strava.com/api/v3';
+let stravaToken = null;
+let stravaAthleteId = null;
+let stravaActivities = [];   // actividades realizadas
+let stravaRoutes = [];       // rutas guardadas
+let currentTab = 'actividades';
+let stravaClientId = null;
+
+// ── INIT ────────────────────────────────────────────────
+function stravaInit() {
+  // Client ID hardcodeado
+  stravaClientId = '249582';
+  localStorage.setItem('veloidoor_strava_client_id', '249582');
+  if(document.getElementById('strava-client-id'))
+    document.getElementById('strava-client-id').value = '249582';
+
+  // Recuperar token guardado
+  stravaToken = localStorage.getItem('veloidoor_strava_token') || null;
+  const tokenExp = parseInt(localStorage.getItem('veloidoor_strava_token_exp') || '0');
+
+  // Capturar token del hash si venimos de OAuth redirect
+  const hash = window.location.hash;
+  if(hash.includes('access_token=')) {
+    const params = new URLSearchParams(hash.replace('#','?').slice(1));
+    const newToken = params.get('access_token');
+    const expiresIn = parseInt(params.get('expires_in') || '21600');
+    if(newToken) {
+      stravaToken = newToken;
+      localStorage.setItem('veloidoor_strava_token', newToken);
+      localStorage.setItem('veloidoor_strava_token_exp', Date.now() + expiresIn * 1000);
+      // Limpiar hash de la URL
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  // Token expirado
+  if(stravaToken && Date.now() > tokenExp && tokenExp > 0) {
+    stravaToken = null;
+    localStorage.removeItem('veloidoor_strava_token');
+    localStorage.removeItem('veloidoor_strava_token_exp');
+  }
+
+  if(stravaToken) {
+    showStravaConnected();
+    loadStravaData();
+  } else {
+    showStravaDisconnected();
+  }
+}
+
+function saveClientId() {
+  const val = document.getElementById('strava-client-id').value.trim();
+  if(!val || isNaN(val)) { showToast('Client ID debe ser un número','error'); return; }
+  stravaClientId = val;
+  localStorage.setItem('veloidoor_strava_client_id', val);
+  showToast('Client ID guardado ✓','success');
+}
+
+// ── OAUTH LOGIN ─────────────────────────────────────────
+function stravaLogin() {
+  if(!stravaClientId) {
+    const id = document.getElementById('strava-client-id').value.trim();
+    if(!id) { showToast('Introduce tu Client ID de Strava primero','error'); return; }
+    stravaClientId = id;
+    localStorage.setItem('veloidoor_strava_client_id', id);
+  }
+  const redirectUri = encodeURIComponent(window.location.href.split('#')[0].split('?')[0]);
+  const scope = 'read,activity:read_all';
+  const url = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&response_type=token&redirect_uri=${redirectUri}&scope=${scope}&approval_prompt=auto`;
+  window.location.href = url;
+}
+
+function stravaLogout() {
+  stravaToken = null;
+  stravaAthleteId = null;
+  stravaActivities = [];
+  stravaRoutes = [];
+  localStorage.removeItem('veloidoor_strava_token');
+  localStorage.removeItem('veloidoor_strava_token_exp');
+  showStravaDisconnected();
+  showToast('Desconectado de Strava');
+}
+
+function stravaRefresh() {
+  stravaActivities = [];
+  stravaRoutes = [];
+  loadStravaData();
+  showToast('Actualizando desde Strava…');
+}
+
+// ── UI STATES ───────────────────────────────────────────
+function showStravaConnected() {
+  document.getElementById('strava-disconnected').style.display = 'none';
+  document.getElementById('strava-connected').style.display = 'block';
+}
+
+function showStravaDisconnected() {
+  document.getElementById('strava-disconnected').style.display = 'block';
+  document.getElementById('strava-connected').style.display = 'none';
+}
+
+// ── LOAD ALL DATA ───────────────────────────────────────
+async function loadStravaData() {
+  showStravaLoading();
+  try {
+    await Promise.all([loadAthlete(), loadActivities(), loadRoutes()]);
+    detectHabituales();
+    renderStravaList();
+  } catch(e) {
+    showStravaError(e.message);
+  }
+}
+
+async function stravaFetch(endpoint) {
+  const res = await fetch(STRAVA_BASE + endpoint, {
+    headers: { 'Authorization': 'Bearer ' + stravaToken }
+  });
+  if(res.status === 401) { stravaLogout(); throw new Error('Token expirado — reconecta con Strava'); }
+  if(!res.ok) throw new Error('Strava API error ' + res.status);
+  return res.json();
+}
+
+async function loadAthlete() {
+  const athlete = await stravaFetch('/athlete');
+  stravaAthleteId = athlete.id;
+  document.getElementById('strava-avatar').src = athlete.profile_medium || athlete.profile || '';
+  document.getElementById('strava-athlete-name').textContent = athlete.firstname + ' ' + athlete.lastname;
+  const stats = await stravaFetch('/athletes/' + athlete.id + '/stats');
+  const rides = stats.all_ride_totals;
+  document.getElementById('strava-athlete-stats').textContent =
+    `${rides.count} salidas · ${(rides.distance/1000).toFixed(0)} km · ${rides.elevation_gain.toFixed(0)} m desnivel total`;
+}
+
+async function loadActivities() {
+  // Carga hasta 200 actividades (4 páginas × 50)
+  let allActivities = [];
+  for(let page = 1; page <= 4; page++) {
+    const batch = await stravaFetch(`/athlete/activities?per_page=50&page=${page}`);
+    if(!batch.length) break;
+    allActivities = allActivities.concat(batch);
+    if(batch.length < 50) break;
+  }
+  // Filtrar solo actividades de ciclismo con GPS
+  stravaActivities = allActivities.filter(a =>
+    ['Ride','VirtualRide','GravelRide','MountainBikeRide','EBikeRide'].includes(a.sport_type||a.type)
+    && a.map && a.map.summary_polyline
+  ).map(a => ({
+    id: a.id,
+    name: a.name,
+    type: 'activity',
+    sportType: a.sport_type || a.type,
+    distKm: (a.distance / 1000).toFixed(1),
+    elevGain: Math.round(a.total_elevation_gain),
+    date: new Date(a.start_date_local).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}),
+    movingTime: a.moving_time,
+    avgSpeed: a.average_speed ? (a.average_speed * 3.6).toFixed(1) : null,
+    avgWatts: a.average_watts || null,
+    count: 1, // para detección de habituales
+    polyline: a.map.summary_polyline,
+  }));
+}
+
+async function loadRoutes() {
+  const routes = await stravaFetch('/athlete/routes?per_page=30&page=1');
+  stravaRoutes = routes
+    .filter(r => r.type === 1) // 1 = cycling
+    .map(r => ({
+      id: r.id,
+      name: r.name,
+      type: 'route',
+      distKm: (r.distance / 1000).toFixed(1),
+      elevGain: Math.round(r.elevation_gain),
+      date: new Date(r.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}),
+      starred: r.starred,
+    }));
+}
+
+// ── DETECCIÓN DE RUTAS HABITUALES ───────────────────────
+// Agrupa actividades por nombre similar y cuenta repeticiones
+function detectHabituales() {
+  const nameMap = {};
+  stravaActivities.forEach(a => {
+    const key = normalizeRouteName(a.name);
+    if(!nameMap[key]) nameMap[key] = { ...a, count: 0, ids: [] };
+    nameMap[key].count++;
+    nameMap[key].ids.push(a.id);
+  });
+  // Marcar como habitual si aparece 3+ veces
+  stravaActivities = stravaActivities.map(a => ({
+    ...a,
+    habitual: nameMap[normalizeRouteName(a.name)]?.count >= 3,
+    habitualCount: nameMap[normalizeRouteName(a.name)]?.count || 1
+  }));
+}
+
+function normalizeRouteName(name) {
+  return (name || '').toLowerCase()
+    .replace(/\d{1,2}\/\d{1,2}\/\d{2,4}/g,'')  // quita fechas
+    .replace(/\d+/g,'')                           // quita números
+    .replace(/[^a-záéíóúñ\s]/gi,'')
+    .trim().replace(/\s+/g,' ');
+}
+
+// ── TABS ────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ['actividades','rutas','habituales'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+  });
+  renderStravaList();
+}
+
+function filterStravaList() { renderStravaList(); }
+
+// ── RENDER LIST ─────────────────────────────────────────
+function renderStravaList() {
+  const container = document.getElementById('strava-list-container');
+  const search = (document.getElementById('strava-search')?.value || '').toLowerCase();
+
+  let items = [];
+  if(currentTab === 'actividades') {
+    items = stravaActivities.filter(a => !search || a.name.toLowerCase().includes(search));
+  } else if(currentTab === 'rutas') {
+    items = stravaRoutes.filter(r => !search || r.name.toLowerCase().includes(search));
+  } else if(currentTab === 'habituales') {
+    // Deduplica por nombre normalizado, muestra solo la más reciente de cada grupo
+    const seen = new Set();
+    items = stravaActivities
+      .filter(a => a.habitual)
+      .filter(a => {
+        const key = normalizeRouteName(a.name);
+        if(seen.has(key)) return false;
+        seen.add(key); return true;
+      })
+      .filter(a => !search || a.name.toLowerCase().includes(search));
+  }
+
+  if(!items.length) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--t3);">
+      ${currentTab === 'habituales' ? '🔁 No se detectaron rutas habituales (necesitas 3+ repeticiones de la misma ruta)' : '📭 Sin resultados'}
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="activity-list">${items.map(item => renderActivityItem(item)).join('')}</div>`;
+}
+
+function renderActivityItem(item) {
+  const icon = item.type === 'route' ? '⭐' :
+    item.sportType === 'MountainBikeRide' ? '🚵' :
+    item.sportType === 'GravelRide' ? '🪨' :
+    item.sportType === 'EBikeRide' ? '⚡' : '🚴';
+
+  const badges = [];
+  if(item.habitual) badges.push(`<span class="activity-badge badge-habitual">🔁 x${item.habitualCount} repeticiones</span>`);
+  if(item.type === 'route') badges.push(`<span class="activity-badge badge-route">Ruta guardada</span>`);
+  if(item.starred) badges.push(`<span class="activity-badge badge-habitual">⭐ Destacada</span>`);
+
+  const meta = [];
+  if(item.date) meta.push(item.date);
+  if(item.avgSpeed) meta.push(item.avgSpeed + ' km/h');
+  if(item.avgWatts) meta.push(item.avgWatts + ' W avg');
+  if(item.movingTime) meta.push(formatTime(item.movingTime * 1000));
+
+  return `<div class="activity-item" onclick="loadStravaItem(${item.id},'${item.type}','${escHtml(item.name)}')">
+    <div class="activity-icon">${icon}</div>
+    <div class="activity-info">
+      <div class="activity-name">${escHtml(item.name)}</div>
+      <div class="activity-meta">
+        ${meta.join(' · ')}
+        ${badges.join(' ')}
+      </div>
+    </div>
+    <div class="activity-stats">
+      <div class="dist">${item.distKm} km</div>
+      <div class="elev">▲ ${item.elevGain} m</div>
+    </div>
+  </div>`;
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── LOAD ROUTE/ACTIVITY INTO APP ────────────────────────
+async function loadStravaItem(id, type, name) {
+  showToast('⏳ Cargando ruta desde Strava…');
+
+  // Highlight selected
+  document.querySelectorAll('.activity-item').forEach(el => el.classList.remove('selected'));
+  event?.currentTarget?.classList?.add('selected');
+
+  try {
+    let points = [];
+
+    if(type === 'route') {
+      // Rutas guardadas → GPX directo
+      const gpxText = await fetchStravaGPX(id);
+      const parsed = parseGPXText(gpxText, name);
+      loadParsedRoute(parsed);
+    } else {
+      // Actividades → reconstruir desde streams
+      points = await loadActivityStreams(id, name);
+      if(points.length < 2) throw new Error('Actividad sin datos GPS suficientes');
+      buildRouteFromPoints(points, name);
+    }
+    document.getElementById('route-card-title').textContent = '📈 ' + name;
+    showToast('✅ Ruta cargada: ' + name, 'success');
+    setTimeout(() => {
+      document.getElementById('route-card').scrollIntoView({behavior:'smooth'});
+    }, 300);
+
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function fetchStravaGPX(routeId) {
+  const res = await fetch(`${STRAVA_BASE}/routes/${routeId}/export.gpx`, {
+    headers: { 'Authorization': 'Bearer ' + stravaToken }
+  });
+  if(!res.ok) throw new Error('No se pudo descargar el GPX de la ruta');
+  return res.text();
+}
+
+// Actividades: reconstruir GPX desde streams de latitud/longitud y altitud
+async function loadActivityStreams(activityId, name) {
+  const data = await stravaFetch(
+    `/activities/${activityId}/streams?keys=latlng,altitude,time&key_by_type=true`
+  );
+  const latlng = data.latlng?.data || [];
+  const altitude = data.altitude?.data || [];
+
+  if(!latlng.length) throw new Error('Esta actividad no tiene datos GPS');
+
+  let dist = 0;
+  let elevGain = 0;
+  let maxSlope = 0;
+  const points = [];
+  let prev = null;
+
+  latlng.forEach(([lat, lon], i) => {
+    const ele = altitude[i] ?? 0;
+    let d = 0;
+    if(prev) {
+      d = haversine(prev.lat, prev.lon, lat, lon);
+      dist += d;
+      const dE = ele - prev.ele;
+      if(dE > 0) elevGain += dE;
+      if(d > 0) { const sl = Math.abs((dE/d)*100); if(sl < 30) maxSlope = Math.max(maxSlope, sl); }
+    }
+    points.push({ lat, lon, ele, dist: dist/1000, d });
+    prev = { lat, lon, ele };
+  });
+
+  return points;
+}
+
+function buildRouteFromPoints(points, name) {
+  const eles = points.map(p => p.ele);
+  const minE = Math.min(...eles), maxE = Math.max(...eles);
+  let elevGain = 0, maxSlope = 0;
+  for(let i = 1; i < points.length; i++) {
+    const dE = points[i].ele - points[i-1].ele;
+    const dD = (points[i].dist - points[i-1].dist) * 1000;
+    if(dE > 0) elevGain += dE;
+    if(dD > 0) { const sl = Math.abs((dE/dD)*100); if(sl < 30) maxSlope = Math.max(maxSlope, sl); }
+  }
+
+  route = {
+    name,
+    points,
+    totalDist: points[points.length-1].dist,
+    elevGain: Math.round(elevGain),
+    maxSlope: Math.round(maxSlope * 10) / 10,
+    filename: name
+  };
+  displayRoute();
+}
+
+function parseGPXText(text, name) {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  const trkpts = doc.querySelectorAll('trkpt');
+  if(trkpts.length < 2) throw new Error('GPX sin puntos de ruta.');
+  const points = []; let dist = 0, elevGain = 0, maxSlope = 0, prev = null;
+  trkpts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute('lat')), lon = parseFloat(pt.getAttribute('lon'));
+    const eleEl = pt.querySelector('ele'); const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+    let d = 0;
+    if(prev) {
+      d = haversine(prev.lat, prev.lon, lat, lon); dist += d;
+      const dE = ele - prev.ele; if(dE > 0) elevGain += dE;
+      if(d > 0) { const sl = Math.abs((dE/d)*100); if(sl < 30) maxSlope = Math.max(maxSlope, sl); }
+    }
+    points.push({ lat, lon, ele, dist: dist/1000, d });
+    prev = { lat, lon, ele };
+  });
+  return { name, points, totalDist: dist/1000, elevGain: Math.round(elevGain), maxSlope: Math.round(maxSlope*10)/10, filename: name };
+}
+
+function loadParsedRoute(parsed) {
+  route = parsed;
+  displayRoute();
+}
+
+function displayRoute() {
+  document.getElementById('s-dist').textContent = route.totalDist.toFixed(1);
+  document.getElementById('s-elev').textContent = route.elevGain;
+  document.getElementById('s-maxslope').textContent = route.maxSlope + '%';
+  document.getElementById('s-pts').textContent = route.points.length;
+  document.getElementById('route-card').style.display = 'block';
+  document.getElementById('map-preview-card').style.display = 'block';
+  drawElevation();
+  initMapPreview();
+}
+
+// ── LOADING / ERROR STATES ──────────────────────────────
+function showStravaLoading() {
+  const c = document.getElementById('strava-list-container');
+  c.innerHTML = `<div style="text-align:center;padding:2.5rem;color:var(--t3);">
+    <div class="loading-spin" style="margin-bottom:.75rem;width:24px;height:24px;border-width:3px;"></div><br>
+    Conectando con Strava…
+  </div>`;
+}
+
+function showStravaError(msg) {
+  const c = document.getElementById('strava-list-container');
+  c.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--danger);">
+    ⚠️ ${msg}<br>
+    <button class="btn btn-outline" style="margin-top:1rem;font-size:.8rem" onclick="stravaRefresh()">Reintentar</button>
+  </div>`;
+}
+
+<script>
+// ════════════════════════════════════════════════════════
+//  SENSORS ENGINE — InTrack v5
+// ════════════════════════════════════════════════════════
+
+// BLE UUIDs periféricos
+const CSC_SVC          = '00001816-0000-1000-8000-00805f9b34fb';
+const CSC_MEASUREMENT  = '00002a5b-0000-1000-8000-00805f9b34fb';
+const BATTERY_SVC      = '0000180f-0000-1000-8000-00805f9b34fb';
+const BATTERY_LEVEL    = '00002a19-0000-1000-8000-00805f9b34fb';
+
+// Estado de sensores
+const sensors = {
+  powerMeter: { device:null, name:'—', value:null, connected:false, priority:false },
+  heartRate:  { device:null, name:'—', value:null, connected:false, priority:false },
+  cadence:    { device:null, name:'—', value:null, connected:false, priority:false },
+  trainer:    { device:null, name:'—', value:null, connected:false, priority:false },
+};
+
+// Prioridad: si hay sensor externo, sobreescribe los datos del rodillo
+function getActivePower()   { return sensors.powerMeter.connected ? sensors.powerMeter.value : null; }
+function getActiveHR()      { return sensors.heartRate.connected  ? sensors.heartRate.value  : null; }
+function getActiveCadence() { return sensors.cadence.connected    ? sensors.cadence.value    : null; }
+
+// ── Conectar medidor de potencia externo ────────────────
+async function connectPowerMeter() {
+  if(!navigator.bluetooth) { showToast('Bluetooth no disponible','error'); return; }
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters:[{services:[CYCLING_POWER_SVC]}],
+      optionalServices:[BATTERY_SVC]
+    });
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(CYCLING_POWER_SVC);
+    const meas = await svc.getCharacteristic(CYCLING_POWER_MEAS);
+    await meas.startNotifications();
+    meas.addEventListener('characteristicvaluechanged', e => {
+      const d = e.target.value;
+      const pwr = Math.max(0, d.getInt16(2, true));
+      sensors.powerMeter.value = pwr;
+      // Prioridad: sobreescribe la UI si está conectado
+      if(sensors.powerMeter.priority) {
+        document.getElementById('m-power').textContent = pwr;
+        updateZoneDisplay(pwr);
+        pushLivePower(pwr);
+        if(session) session.powerSamples.push({t:Date.now()-sessionStartTime, w:pwr});
+      }
+      updateSensorCard('powerMeter', pwr);
+    });
+    // Cadencia desde power meter (si la incluye)
+    try {
+      const cad = await svc.getCharacteristic('00002a65-0000-1000-8000-00805f9b34fb');
+    } catch(e){}
+
+    sensors.powerMeter.device = device;
+    sensors.powerMeter.name = device.name || 'Potenciómetro';
+    sensors.powerMeter.connected = true;
+    sensors.powerMeter.priority = true;
+    device.addEventListener('gattserverdisconnected', () => {
+      sensors.powerMeter.connected = false; sensors.powerMeter.priority = false;
+      renderSensorsPanel(); showToast('Potenciómetro desconectado');
+    });
+    renderSensorsPanel();
+    showToast('✅ ' + sensors.powerMeter.name + ' conectado', 'success');
+  } catch(e) {
+    if(e.name !== 'NotFoundError') showToast('Error potenciómetro: ' + e.message, 'error');
+  }
+}
+
+// ── Conectar banda FC externa ────────────────────────────
+async function connectHRMonitor() {
+  if(!navigator.bluetooth) { showToast('Bluetooth no disponible','error'); return; }
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters:[{services:[HR_SVC]}],
+      optionalServices:[BATTERY_SVC]
+    });
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(HR_SVC);
+    const meas = await svc.getCharacteristic(HR_MEASUREMENT);
+    await meas.startNotifications();
+    meas.addEventListener('characteristicvaluechanged', e => {
+      const d = e.target.value, flags = d.getUint8(0);
+      const hr = (flags & 0x01) ? d.getUint16(1, true) : d.getUint8(1);
+      sensors.heartRate.value = hr;
+      if(sensors.heartRate.priority) {
+        document.getElementById('m-hr').textContent = hr;
+        if(session) session.hrSamples.push({t:Date.now()-sessionStartTime, bpm:hr});
+      }
+      updateSensorCard('heartRate', hr);
+    });
+    sensors.heartRate.device = device;
+    sensors.heartRate.name = device.name || 'Banda FC';
+    sensors.heartRate.connected = true;
+    sensors.heartRate.priority = true;
+    device.addEventListener('gattserverdisconnected', () => {
+      sensors.heartRate.connected = false; sensors.heartRate.priority = false;
+      renderSensorsPanel(); showToast('Banda FC desconectada');
+    });
+    renderSensorsPanel();
+    showToast('✅ ' + sensors.heartRate.name + ' conectado', 'success');
+  } catch(e) {
+    if(e.name !== 'NotFoundError') showToast('Error FC: ' + e.message, 'error');
+  }
+}
+
+// ── Conectar sensor cadencia/velocidad ──────────────────
+async function connectCadenceSensor() {
+  if(!navigator.bluetooth) { showToast('Bluetooth no disponible','error'); return; }
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters:[{services:[CSC_SVC]}],
+      optionalServices:[BATTERY_SVC]
+    });
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(CSC_SVC);
+    const meas = await svc.getCharacteristic(CSC_MEASUREMENT);
+    await meas.startNotifications();
+    let lastCrankRevs = 0, lastCrankTime = 0;
+    meas.addEventListener('characteristicvaluechanged', e => {
+      const d = e.target.value, flags = d.getUint8(0);
+      let offset = 1;
+      // Wheel revolution data (bit 0)
+      if(flags & 0x01) offset += 6;
+      // Crank revolution data (bit 1)
+      if(flags & 0x02) {
+        const crankRevs = d.getUint16(offset, true);
+        const crankTime = d.getUint16(offset + 2, true);
+        if(lastCrankRevs > 0 && crankRevs !== lastCrankRevs) {
+          const revDiff  = (crankRevs - lastCrankRevs + 65536) % 65536;
+          const timeDiff = (crankTime - lastCrankTime + 65536) % 65536;
+          if(timeDiff > 0) {
+            const cadence = Math.round((revDiff / timeDiff) * 1024 * 60);
+            sensors.cadence.value = cadence;
+            if(sensors.cadence.priority) {
+              document.getElementById('m-cadence').textContent = cadence;
+            }
+            updateSensorCard('cadence', cadence);
+          }
+        }
+        lastCrankRevs = crankRevs; lastCrankTime = crankTime;
+      }
+    });
+    sensors.cadence.device = device;
+    sensors.cadence.name = device.name || 'Sensor cadencia';
+    sensors.cadence.connected = true;
+    sensors.cadence.priority = true;
+    device.addEventListener('gattserverdisconnected', () => {
+      sensors.cadence.connected = false; sensors.cadence.priority = false;
+      renderSensorsPanel();
+    });
+    renderSensorsPanel();
+    showToast('✅ ' + sensors.cadence.name + ' conectado', 'success');
+  } catch(e) {
+    if(e.name !== 'NotFoundError') showToast('Error cadencia: ' + e.message, 'error');
+  }
+}
+
+function updateSensorCard(key, val) {
+  const el = document.getElementById('sensor-val-' + key);
+  if(el) el.textContent = val !== null ? val : '—';
+}
+
+function renderSensorsPanel() {
+  const grid = document.getElementById('sensor-grid');
+  if(!grid) return;
+  const defs = [
+    { key:'powerMeter', icon:'⚡', title:'Medidor de potencia', unit:'W',   connectFn:'connectPowerMeter()', disconnectFn:'disconnectSensor("powerMeter")', color:'#f59e0b' },
+    { key:'heartRate',  icon:'❤️', title:'Banda frecuencia cardíaca', unit:'bpm', connectFn:'connectHRMonitor()', disconnectFn:'disconnectSensor("heartRate")', color:'#ef4444' },
+    { key:'cadence',    icon:'🔄', title:'Sensor de cadencia', unit:'rpm', connectFn:'connectCadenceSensor()', disconnectFn:'disconnectSensor("cadence")', color:'#3b82f6' },
+    { key:'trainer',    icon:'🏋️', title:'Rodillo inteligente', unit:'W',  connectFn:'showPanel("entrena")', disconnectFn:'disconnectTrainer()', color:'#00e5a0' },
+  ];
+  // Sync trainer state
+  sensors.trainer.connected = !!trainerDevice;
+  sensors.trainer.name = trainerDevice ? (trainerDevice.name||'Rodillo') : '—';
+  sensors.trainer.value = document.getElementById('m-power')?.textContent || null;
+
+  grid.innerHTML = defs.map(d => {
+    const s = sensors[d.key];
+    const statusClass = s.connected ? (s.priority ? 'ss-pri' : 'ss-on') : 'ss-off';
+    const statusText  = s.connected ? (s.priority ? '● PRIORIDAD' : '● ACTIVO') : '○ SIN CONECTAR';
+    return `<div class="sensor-card ${s.connected ? (s.priority ? 'priority' : 'connected') : ''}" id="sc-${d.key}">
+      <div class="sensor-header">
+        <div class="sensor-icon">${d.icon}</div>
+        <div class="sensor-title">${d.title}</div>
+        <span class="sensor-status ${statusClass}">${statusText}</span>
+      </div>
+      <span class="sensor-val" id="sensor-val-${d.key}" style="color:${s.connected ? d.color : 'var(--t3)'}">
+        ${s.value !== null ? s.value : '—'}
+      </span>
+      <span class="sensor-unit">${d.unit}</span>
+      <div class="sensor-device">${s.connected ? s.name : 'No conectado'}</div>
+      <div style="margin-top:.9rem">
+        ${s.connected
+          ? `<button class="btn btn-outline" style="font-size:.75rem;padding:.3rem .7rem" onclick="${d.disconnectFn}">Desconectar</button>`
+          : `<button class="btn btn-primary" style="font-size:.75rem;padding:.3rem .7rem" onclick="${d.connectFn}">🔵 Conectar</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function disconnectSensor(key) {
+  const s = sensors[key];
+  if(s.device && s.device.gatt.connected) s.device.gatt.disconnect();
+  s.connected = false; s.priority = false; s.device = null; s.value = null;
+  renderSensorsPanel();
+  showToast(key + ' desconectado');
+}
+
+// ════════════════════════════════════════════════════════
+//  TCX EXPORT ENGINE
+// ════════════════════════════════════════════════════════
+function generateTCX(record) {
+  const pts = route ? route.points : [];
+  const startTime = new Date(record.id).toISOString();
+
+  // Interpolar GPS + datos por tiempo
+  const totalSecs = Math.floor(record.durationMs / 1000);
+  const pSamples  = record.powerSamples || [];
+  const hrSamples = record.hrSamples    || [];
+
+  let trackpoints = '';
+  const step = Math.max(1, Math.floor(pts.length / Math.min(totalSecs, pts.length)));
+
+  for(let i = 0; i < pts.length; i += step) {
+    const pt = pts[i];
+    const t  = new Date(record.id + (i / pts.length) * record.durationMs).toISOString();
+    const pi = Math.floor((i / pts.length) * pSamples.length);
+    const hi = Math.floor((i / pts.length) * hrSamples.length);
+    const pw = pSamples[pi] !== undefined ? pSamples[pi] : 0;
+    const hr = hrSamples[hi] !== undefined ? hrSamples[hi] : 0;
+
+    trackpoints += `
+      <Trackpoint>
+        <Time>${t}</Time>
+        <Position>
+          <LatitudeDegrees>${pt.lat.toFixed(7)}</LatitudeDegrees>
+          <LongitudeDegrees>${pt.lon.toFixed(7)}</LongitudeDegrees>
+        </Position>
+        <AltitudeMeters>${pt.ele.toFixed(1)}</AltitudeMeters>
+        <DistanceMeters>${(pt.dist * 1000).toFixed(0)}</DistanceMeters>
+        ${hr > 0 ? `<HeartRateBpm><Value>${hr}</Value></HeartRateBpm>` : ''}
+        ${pw > 0 ? `<Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Watts>${pw}</Watts></TPX></Extensions>` : ''}
+      </Trackpoint>`;
+  }
+
+  const avgPow = pSamples.length ? Math.round(pSamples.reduce((a,b)=>a+b,0)/pSamples.length) : 0;
+  const maxPow = pSamples.length ? Math.max(...pSamples) : 0;
+  const avgHR  = hrSamples.length ? Math.round(hrSamples.reduce((a,b)=>a+b,0)/hrSamples.length) : 0;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2
+  http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+  <Activities>
+    <Activity Sport="Biking">
+      <Id>${startTime}</Id>
+      <Lap StartTime="${startTime}">
+        <TotalTimeSeconds>${Math.floor(record.durationMs/1000)}</TotalTimeSeconds>
+        <DistanceMeters>${((parseFloat(record.distKm)||0)*1000).toFixed(0)}</DistanceMeters>
+        <MaximumSpeed>0</MaximumSpeed>
+        <Calories>0</Calories>
+        ${avgHR > 0 ? `<AverageHeartRateBpm><Value>${avgHR}</Value></AverageHeartRateBpm>` : ''}
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>${trackpoints}
+        </Track>
+        <Extensions>
+          <LX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            ${avgPow > 0 ? `<AvgWatts>${avgPow}</AvgWatts>` : ''}
+            ${maxPow > 0 ? `<MaxWatts>${maxPow}</MaxWatts>` : ''}
+          </LX>
+        </Extensions>
+      </Lap>
+      <Notes>InTrack · ${record.name}</Notes>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+}
+
+function downloadTCX(record) {
+  const xml  = generateTCX(record);
+  const name = (record.name || 'intrack').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([xml], {type:'application/xml'}));
+  a.download = `intrack_${name}_${record.id}.tcx`;
+  a.click();
+  showToast('TCX descargado ✓', 'success');
+}
+
+async function uploadToStrava(record) {
+  if(!stravaToken) { showToast('Conecta Strava primero','error'); return; }
+  const xml  = generateTCX(record);
+  const blob = new Blob([xml], {type:'application/xml'});
+  const form = new FormData();
+  form.append('file', blob, 'activity.tcx');
+  form.append('data_type', 'tcx');
+  form.append('name', record.name || 'InTrack ride');
+  form.append('description', `Entrenamiento en rodillo · InTrack · ${record.duration}`);
+  form.append('trainer', '1');
+  form.append('commute', '0');
+  try {
+    showToast('⏳ Subiendo a Strava…');
+    const res = await fetch('https://www.strava.com/api/v3/uploads', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+stravaToken},
+      body: form
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    // Poll hasta tener activity_id
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      if(attempts > 10) { clearInterval(poll); showToast('Subida en proceso en Strava','success'); return; }
+      const check = await fetch(`https://www.strava.com/api/v3/uploads/${data.id}`, {
+        headers:{'Authorization':'Bearer '+stravaToken}
+      });
+      const status = await check.json();
+      if(status.activity_id) {
+        clearInterval(poll);
+        showToast('✅ Actividad publicada en Strava', 'success');
+      } else if(status.error) {
+        clearInterval(poll);
+        showToast('Error Strava: ' + status.error, 'error');
+      }
+    }, 2000);
+  } catch(e) {
+    showToast('Error subiendo a Strava: ' + e.message, 'error');
+  }
+}
+
+function renderExportBar(record) {
+  const bar = document.getElementById('export-bar');
+  if(!bar) return;
+  bar.innerHTML = `
+    <button class="btn-strava" onclick="uploadToStrava(window._lastRecord)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+      Subir a Strava
+    </button>
+    <button class="btn-garmin" onclick="downloadTCX(window._lastRecord);showToast('Abre Garmin Connect → Importar → sube este TCX')">
+      🟦 Garmin Connect
+    </button>
+    <button class="btn-tp" onclick="downloadTCX(window._lastRecord);showToast('Arrastra el TCX al calendario de TrainingPeaks')">
+      📈 TrainingPeaks
+    </button>
+    <button class="btn btn-outline" style="font-size:.78rem" onclick="downloadTCX(window._lastRecord)">
+      💾 Descargar TCX
+    </button>`;
+}
+
+// Override showPostModal para incluir export bar
+const _origShowPostModal = showPostModal;
+window.showPostModal = function(record) {
+  window._lastRecord = record;
+  _origShowPostModal(record);
+  setTimeout(() => renderExportBar(record), 200);
+};
+
+// ════════════════════════════════════════════════════════
+//  MOUNTAINS ENGINE
+// ════════════════════════════════════════════════════════
+let mountains = JSON.parse(localStorage.getItem('intrack_mountains') || '[]');
+let mountainPreview = null; // ruta temporal para preview
+
+function renderMountainsPanel() {
+  const container = document.getElementById('mountain-list-container');
+  if(!container) return;
+  if(!mountains.length) {
+    container.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--t3);">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">⛰️</div>
+      Aún no tienes puertos guardados.<br>
+      <small style="font-size:.78rem;">Añade tus montañas favoritas desde Strava, un GPX o buscando un segmento.</small>
+    </div>`;
+    return;
+  }
+  container.innerHTML = `<div class="mountain-grid">${mountains.map((m,i) => `
+    <div class="mountain-item">
+      <div class="mountain-icon">${m.emoji || '⛰️'}</div>
+      <div class="mountain-info">
+        <div class="mountain-name">${escHtml(m.name)}</div>
+        <div class="mountain-meta">
+          <span>📏 ${parseFloat(m.distKm).toFixed(1)} km</span>
+          <span>▲ ${m.elevGain} m</span>
+          <span>↑ máx ${m.maxSlope}%</span>
+          ${m.date ? `<span>📅 ${m.date}</span>` : ''}
+        </div>
+      </div>
+      <div class="mountain-stats">
+        <div class="peak">${m.peakAlt ? m.peakAlt+'m' : '—'}</div>
+        <div class="gain">cima</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-left:.5rem">
+        <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .65rem" onclick="trainMountain(${i})">🚴 Entrenar</button>
+        <button class="btn btn-outline" style="font-size:.72rem;padding:.3rem .65rem" onclick="deleteMountain(${i})">🗑️</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function trainMountain(idx) {
+  const m = mountains[idx];
+  if(!m.points) { showToast('Sin datos de perfil para este puerto','error'); return; }
+  route = {
+    name: m.name,
+    points: m.points,
+    totalDist: m.distKm,
+    elevGain: m.elevGain,
+    maxSlope: m.maxSlope,
+    filename: m.name
+  };
+  showToast('Puerto cargado: ' + m.name, 'success');
+  showPanel('entrena');
+}
+
+function deleteMountain(idx) {
+  mountains.splice(idx, 1);
+  localStorage.setItem('intrack_mountains', JSON.stringify(mountains));
+  renderMountainsPanel();
+  showToast('Puerto eliminado');
+}
+
+function saveMountainToCollection() {
+  if(!mountainPreview) { showToast('Sin puerto para guardar','error'); return; }
+  const existing = mountains.findIndex(m => m.name === mountainPreview.name);
+  if(existing >= 0) { showToast('Ya tienes este puerto guardado',''); return; }
+  mountains.push(mountainPreview);
+  localStorage.setItem('intrack_mountains', JSON.stringify(mountains));
+  mountainPreview = null;
+  document.getElementById('mountain-preview-card').style.display = 'none';
+  renderMountainsPanel();
+  showToast('⛰️ Puerto guardado en tu colección', 'success');
+}
+
+function loadMountainAsRoute() {
+  if(!mountainPreview) return;
+  route = {
+    name: mountainPreview.name,
+    points: mountainPreview.points,
+    totalDist: mountainPreview.distKm,
+    elevGain: mountainPreview.elevGain,
+    maxSlope: mountainPreview.maxSlope,
+    filename: mountainPreview.name
+  };
+  showToast('Puerto cargado: ' + mountainPreview.name, 'success');
+  showPanel('entrena');
+}
+
+function importMountainGPX(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = parseGPXText(e.target.result, file.name.replace('.gpx','').replace(/_/g,' '));
+      previewMountain(parsed);
+    } catch(err) { showToast('Error GPX: '+err.message,'error'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function previewMountain(parsed) {
+  const peakAlt = Math.round(Math.max(...parsed.points.map(p=>p.ele)));
+  mountainPreview = {
+    name: parsed.name,
+    points: parsed.points,
+    distKm: parsed.totalDist,
+    elevGain: parsed.elevGain,
+    maxSlope: parsed.maxSlope,
+    peakAlt,
+    emoji: '⛰️',
+    date: new Date().toLocaleDateString('es-ES')
+  };
+  document.getElementById('mountain-preview-title').textContent = '📈 ' + parsed.name;
+  document.getElementById('mountain-preview-card').style.display = 'block';
+  document.getElementById('mountain-preview-stats').innerHTML = `
+    <div class="stat-box"><span class="val">${parsed.totalDist.toFixed(1)}</span><span class="lbl">km</span></div>
+    <div class="stat-box"><span class="val">${parsed.elevGain}</span><span class="lbl">desnivel m</span></div>
+    <div class="stat-box"><span class="val">${parsed.maxSlope}%</span><span class="lbl">pendiente máx</span></div>
+    <div class="stat-box"><span class="val">${peakAlt}</span><span class="lbl">cima m</span></div>`;
+  drawMountainPreview(parsed.points);
+  document.getElementById('mountain-preview-card').scrollIntoView({behavior:'smooth'});
+}
+
+function drawMountainPreview(points) {
+  const canvas = document.getElementById('mountain-preview-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = devicePixelRatio||1;
+  canvas.width = canvas.offsetWidth*dpr; canvas.height = canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth, H=canvas.offsetHeight, pad=20;
+  const eles=points.map(p=>p.ele), minE=Math.min(...eles), maxE=Math.max(...eles);
+  const xf=i=>(points[i].dist/points[points.length-1].dist)*(W-pad*2)+pad;
+  const yf=e=>H-pad-((e-minE)/(maxE-minE+1))*(H-pad*2);
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(0,229,160,.4)'); grad.addColorStop(1,'rgba(0,229,160,.03)');
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(points[0].ele));
+  for(let i=1;i<points.length;i++) ctx.lineTo(xf(i),yf(points[i].ele));
+  ctx.lineTo(xf(points.length-1),H); ctx.lineTo(xf(0),H); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xf(0),yf(points[0].ele));
+  for(let i=1;i<points.length;i++) ctx.lineTo(xf(i),yf(points[i].ele));
+  ctx.strokeStyle='#00e5a0'; ctx.lineWidth=2.5; ctx.stroke();
+}
+
+async function addMountainFromStrava() {
+  if(!stravaToken) { showToast('Conecta Strava primero en la pestaña Ruta','error'); return; }
+  showPanel('ruta');
+  switchTab('actividades');
+  showToast('Selecciona una actividad de subida en la lista →');
+}
+
+function addMountainFromSegment() {
+  if(!stravaToken) { showToast('Conecta Strava primero en la pestaña Ruta','error'); return; }
+  document.getElementById('segment-search-card').style.display='block';
+  document.getElementById('segment-search-card').scrollIntoView({behavior:'smooth'});
+}
+
+async function searchSegments() {
+  const query = document.getElementById('segment-search-input').value.trim();
+  if(!query) return;
+  const results = document.getElementById('segment-results');
+  results.innerHTML = `<div style="color:var(--t3);padding:1rem;text-align:center"><div class="loading-spin"></div></div>`;
+  try {
+    // Usar explore para buscar segmentos de ciclismo
+    // Necesitamos bounds — usamos los de la ruta cargada si hay, o España por defecto
+    const bounds = route && route.points.length > 0
+      ? `${Math.min(...route.points.map(p=>p.lat))},${Math.min(...route.points.map(p=>p.lon))},${Math.max(...route.points.map(p=>p.lat))},${Math.max(...route.points.map(p=>p.lon))}`
+      : '36.0,-9.5,43.8,3.3'; // España
+    const data = await stravaFetch(`/segments/explore?bounds=${bounds}&activity_type=riding`);
+    const segs = (data.segments||[]).filter(s => s.name.toLowerCase().includes(query.toLowerCase()));
+    if(!segs.length) {
+      results.innerHTML = `<div style="color:var(--t3);padding:1rem;text-align:center">Sin resultados para "${query}".<br><small>Prueba con otro nombre o carga un GPX directamente.</small></div>`;
+      return;
+    }
+    results.innerHTML = segs.slice(0,8).map(s=>`
+      <div class="activity-item" onclick="loadSegmentAsMountain(${s.id},'${escHtml(s.name)}')">
+        <div class="activity-icon">⛰️</div>
+        <div class="activity-info">
+          <div class="activity-name">${escHtml(s.name)}</div>
+          <div class="activity-meta">
+            <span>📏 ${(s.distance/1000).toFixed(1)} km</span>
+            <span>▲ ${Math.round(s.elev_difference)} m</span>
+            <span>↑ ${s.avg_grade?.toFixed(1)}% media</span>
+          </div>
+        </div>
+        <div class="activity-stats">
+          <div class="dist">${Math.round(s.elev_difference)} m</div>
+          <div class="elev">desnivel</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    results.innerHTML = `<div style="color:var(--danger);padding:1rem">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadSegmentAsMountain(segId, name) {
+  try {
+    showToast('⏳ Cargando perfil del segmento…');
+    const seg = await stravaFetch(`/segments/${segId}`);
+    // Construir puntos desde el polyline del segmento
+    const pts = decodePolyline(seg.map.polyline);
+    if(!pts.length) { showToast('Sin datos de perfil','error'); return; }
+    const parsed = {
+      name, points: pts,
+      totalDist: seg.distance/1000,
+      elevGain: Math.round(seg.total_elevation_gain||0),
+      maxSlope: Math.round((seg.maximum_grade||0)*10)/10
+    };
+    previewMountain(parsed);
+    document.getElementById('segment-search-card').style.display='none';
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+
+// Decode Google Polyline format (usado por Strava)
+function decodePolyline(encoded) {
+  if(!encoded) return [];
+  const pts=[]; let idx=0,lat=0,lng=0;
+  while(idx<encoded.length){
+    let b,shift=0,result=0;
+    do{ b=encoded.charCodeAt(idx++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    lat+=(result&1)?~(result>>1):(result>>1);
+    shift=0; result=0;
+    do{ b=encoded.charCodeAt(idx++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    lng+=(result&1)?~(result>>1):(result>>1);
+    pts.push({lat:lat/1e5, lon:lng/1e5, ele:0, dist:0, d:0});
+  }
+  // Calcular distancias acumuladas
+  let dist=0;
+  for(let i=1;i<pts.length;i++){
+    const d=haversine(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+    dist+=d; pts[i].dist=dist/1000;
+  }
+  return pts;
+}
+</script>
+</body>
+</html>

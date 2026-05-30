@@ -1869,7 +1869,6 @@ function showToast(msg,type='') {
 loadConfig();
 if(!navigator.bluetooth) document.getElementById('ble-warning').style.display='block';
 window.addEventListener('resize',()=>{ if(route){ drawElevation(); drawLiveElevation(routeProgress); } });
-stravaInit();
 
 // ════════════════════════════════════════════════════════
 //  STRAVA ENGINE — InTrack v5
@@ -1879,8 +1878,8 @@ stravaInit();
 const STRAVA_BASE = 'https://www.strava.com/api/v3';
 let stravaToken = null;
 let stravaAthleteId = null;
-let stravaActivities = [];   // actividades realizadas
-let stravaRoutes = [];       // rutas guardadas
+let stravaActivities = [];
+let stravaRoutes = [];
 let currentTab = 'actividades';
 let stravaClientId = null;
 
@@ -2904,6 +2903,9 @@ function decodePolyline(encoded) {
   }
   return pts;
 }
+
+// ── Llamada final una vez todo declarado ──
+stravaInit();
 </script>
 </body>
 </html>

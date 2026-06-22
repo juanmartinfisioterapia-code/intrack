@@ -708,7 +708,7 @@ let sessionInterval = null, simInterval = null;
 let sessionStartTime = null, sessionPaused = false;
 let sessionPausedTime = 0, pauseStart = null;
 let routeProgress = 0;
-let history = JSON.parse(localStorage.getItem('veloidoor_history') || '[]');
+let trainingHistory = JSON.parse(localStorage.getItem('veloidoor_history') || '[]');
 let config = JSON.parse(localStorage.getItem('veloidoor_config') || '{"ftp":200,"weight":75,"trainer":"d500"}');
 
 // Maps
@@ -1608,9 +1608,9 @@ function stopSession() {
     zoneTimes
   };
 
-  history.unshift(record);
-  if(history.length>50) history.pop();
-  localStorage.setItem('veloidoor_history',JSON.stringify(history));
+  trainingHistory.unshift(record);
+  if(trainingHistory.length>50) trainingHistory.pop();
+  localStorage.setItem('veloidoor_history',JSON.stringify(trainingHistory));
 
   // Reset UI
   session=null;
@@ -1757,8 +1757,8 @@ function closeModal(evt) {
 // ════════════════════════════════════════════════════════
 function renderHistory() {
   const el=document.getElementById('history-container');
-  if(!history.length){ el.innerHTML=`<div class="history-empty"><span>🚴</span>No hay entrenamientos aún.</div>`; return; }
-  el.innerHTML=`<div class="session-list">${history.map(s=>`
+  if(!trainingHistory.length){ el.innerHTML=`<div class="history-empty"><span>🚴</span>No hay entrenamientos aún.</div>`; return; }
+  el.innerHTML=`<div class="session-list">${trainingHistory.map(s=>`
     <div class="session-item" onclick="showSessionDetail(${s.id})">
       <div class="session-date">${s.date}</div>
       <div class="session-name">${s.name}</div>
@@ -1771,13 +1771,13 @@ function renderHistory() {
 }
 
 function showSessionDetail(id) {
-  const record=history.find(s=>s.id===id);
+  const record=trainingHistory.find(s=>s.id===id);
   if(record) showPostModal(record);
 }
 
 function clearHistory() {
   if(!confirm('¿Borrar todo el historial?')) return;
-  history=[]; localStorage.removeItem('veloidoor_history'); renderHistory();
+  trainingHistory = []; localStorage.removeItem('veloidoor_history'); renderHistory();
   showToast('Historial borrado');
 }
 

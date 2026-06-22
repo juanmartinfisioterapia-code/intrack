@@ -1934,7 +1934,8 @@ async function exchangeCodeForToken(code) {
     </div>`;
 
   // Necesitamos el client_secret para el intercambio
-  let clientSecret = localStorage.getItem('intrack_strava_secret') || '';
+  let clientSecret = localStorage.getItem('intrack_strava_secret') || 'e1e19e821589fdd0c757589cd6ecf0a82ce86206';
+  localStorage.setItem('intrack_strava_secret', clientSecret);
   if(!clientSecret) {
     clientSecret = prompt('Para completar la conexión, introduce tu Strava Client Secret\n(lo encuentras en developers.strava.com → tu app → "Mostrar" junto a "Secreto de cliente"):');
     if(!clientSecret) { showStravaDisconnected(); showToast('Necesitas el Client Secret para conectar','error'); return; }

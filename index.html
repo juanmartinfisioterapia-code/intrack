@@ -2243,7 +2243,7 @@ async function loadStravaItem(id, type, name) {
 }
 
 async function fetchStravaGPX(routeId) {
-  const res = await fetch(`${STRAVA_BASE}/routes/${routeId}/export.gpx`, {
+  const res = await fetch(`${STRAVA_BASE}/routes/${routeId}/export_gpx`, {
     headers: { 'Authorization': 'Bearer ' + stravaToken }
   });
   if(!res.ok) throw new Error('No se pudo descargar el GPX de la ruta');

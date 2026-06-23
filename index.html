@@ -2035,7 +2035,18 @@ async function stravaFetch(endpoint) {
   });
   if(res.status === 401) { stravaLogout(); throw new Error('Token expirado — reconecta con Strava'); }
   if(!res.ok) throw new Error('Strava API error ' + res.status);
-  return res.json();
+  const text = await res.text();
+  return parseJSONPreservingBigIds(text);
+}
+
+// Strava devuelve IDs de hasta 19 dígitos que pierden precisión con JSON.parse normal
+// (Number.MAX_SAFE_INTEGER son solo 15-16 dígitos). Esta función convierte cualquier
+// valor numérico del campo "id" en un string exacto antes de parsear, para no perder
+// ningún dígito al reconstruir el objeto.
+function parseJSONPreservingBigIds(text) {
+  // Envuelve cualquier "id":NUMERO_LARGO (15+ dígitos) en comillas para tratarlo como string
+  const safe = text.replace(/"id":(\d{15,})/g, '"id":"$1"');
+  return JSON.parse(safe);
 }
 
 async function loadAthlete() {
@@ -2063,7 +2074,7 @@ async function loadActivities() {
     ['Ride','VirtualRide','GravelRide','MountainBikeRide','EBikeRide'].includes(a.sport_type||a.type)
     && a.map && a.map.summary_polyline
   ).map(a => ({
-    id: a.id_str || String(a.id),
+    id: a.id,
     name: a.name,
     type: 'activity',
     sportType: a.sport_type || a.type,
@@ -2083,7 +2094,7 @@ async function loadRoutes() {
   stravaRoutes = routes
     .filter(r => r.type === 1) // 1 = cycling
     .map(r => ({
-      id: r.id_str || String(r.id),
+      id: r.id,
       name: r.name,
       type: 'route',
       distKm: (r.distance / 1000).toFixed(1),

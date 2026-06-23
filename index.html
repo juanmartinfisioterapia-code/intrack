@@ -1922,8 +1922,8 @@ function stravaInit() {
 }
 
 // Intercambio de código por token usando nuestra Netlify Function
-// El client_secret vive solo en el servidor (variables de entorno de Netlify),
-// nunca en este código ni en el navegador del usuario.
+// VERSIÓN TEMPORAL FUNCIONAL — intercambio directo con Strava
+// (provisional, mientras se resuelve el tema de la Netlify Function)
 async function exchangeCodeForToken(code) {
   showStravaConnected();
   document.getElementById('strava-athlete-name').textContent = 'Conectando…';
@@ -1934,15 +1934,22 @@ async function exchangeCodeForToken(code) {
       Autenticando con Strava…
     </div>`;
 
+  const clientSecret = 'e1e19e821589fdd0c757589cd6ecf0a82ce86206';
+
   try {
-    const res = await fetch('/.netlify/functions/strava-token', {
+    const res = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code })
+      body: JSON.stringify({
+        client_id: stravaClientId,
+        client_secret: clientSecret,
+        code,
+        grant_type: 'authorization_code'
+      })
     });
     const data = await res.json();
-    if(data.error || !data.access_token) {
-      throw new Error(data.error || 'No se pudo completar la conexión con Strava');
+    if(data.errors || !data.access_token) {
+      throw new Error(data.message || 'No se pudo completar la conexión con Strava');
     }
     stravaToken = data.access_token;
     localStorage.setItem('veloidoor_strava_token', stravaToken);

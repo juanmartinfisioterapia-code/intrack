@@ -2063,7 +2063,7 @@ async function loadActivities() {
     ['Ride','VirtualRide','GravelRide','MountainBikeRide','EBikeRide'].includes(a.sport_type||a.type)
     && a.map && a.map.summary_polyline
   ).map(a => ({
-    id: a.id,
+    id: a.id_str || String(a.id),
     name: a.name,
     type: 'activity',
     sportType: a.sport_type || a.type,
@@ -2083,7 +2083,7 @@ async function loadRoutes() {
   stravaRoutes = routes
     .filter(r => r.type === 1) // 1 = cycling
     .map(r => ({
-      id: r.id,
+      id: r.id_str || String(r.id),
       name: r.name,
       type: 'route',
       distKm: (r.distance / 1000).toFixed(1),
@@ -2180,7 +2180,7 @@ function renderActivityItem(item) {
   if(item.avgWatts) meta.push(item.avgWatts + ' W avg');
   if(item.movingTime) meta.push(formatTime(item.movingTime * 1000));
 
-  return `<div class="activity-item" onclick="loadStravaItem(${item.id},'${item.type}','${escHtml(item.name)}')">
+  return `<div class="activity-item" onclick="loadStravaItem('${item.id}','${item.type}','${escHtml(item.name)}')">
     <div class="activity-icon">${icon}</div>
     <div class="activity-info">
       <div class="activity-name">${escHtml(item.name)}</div>

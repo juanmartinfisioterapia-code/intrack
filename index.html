@@ -1921,8 +1921,9 @@ function stravaInit() {
   }
 }
 
-// Intercambio de código por token usando Strava token endpoint
-// Necesitamos el client_secret — lo guardamos en localStorage la primera vez
+// Intercambio de código por token usando nuestra Netlify Function
+// El client_secret vive solo en el servidor (variables de entorno de Netlify),
+// nunca en este código ni en el navegador del usuario.
 async function exchangeCodeForToken(code) {
   showStravaConnected();
   document.getElementById('strava-athlete-name').textContent = 'Conectando…';
@@ -1933,31 +1934,15 @@ async function exchangeCodeForToken(code) {
       Autenticando con Strava…
     </div>`;
 
-  // Necesitamos el client_secret para el intercambio
-  let clientSecret = localStorage.getItem('intrack_strava_secret') || 'e1e19e821589fdd0c757589cd6ecf0a82ce86206';
-  localStorage.setItem('intrack_strava_secret', clientSecret);
-  if(!clientSecret) {
-    clientSecret = prompt('Para completar la conexión, introduce tu Strava Client Secret\n(lo encuentras en developers.strava.com → tu app → "Mostrar" junto a "Secreto de cliente"):');
-    if(!clientSecret) { showStravaDisconnected(); showToast('Necesitas el Client Secret para conectar','error'); return; }
-    localStorage.setItem('intrack_strava_secret', clientSecret.trim());
-  }
-
   try {
-    const res = await fetch('https://www.strava.com/oauth/token', {
+    const res = await fetch('/.netlify/functions/strava-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: stravaClientId,
-        client_secret: clientSecret.trim(),
-        code,
-        grant_type: 'authorization_code'
-      })
+      body: JSON.stringify({ code })
     });
     const data = await res.json();
-    if(data.errors || !data.access_token) {
-      // Secret incorrecto — limpiar y pedir de nuevo
-      localStorage.removeItem('intrack_strava_secret');
-      throw new Error(data.message || 'Token inválido — verifica el Client Secret');
+    if(data.error || !data.access_token) {
+      throw new Error(data.error || 'No se pudo completar la conexión con Strava');
     }
     stravaToken = data.access_token;
     localStorage.setItem('veloidoor_strava_token', stravaToken);
@@ -1990,7 +1975,7 @@ function stravaLogin() {
   }
   // Strava ya no soporta implicit flow (response_type=token)
   // Usamos authorization_code flow con redirect a nuestra página
-  const redirectUri = encodeURIComponent('https://juanmartinfisioterapia-code.github.io/intrack/');
+  const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
   const scope = 'read,activity:read_all,activity:write';
   const url = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}&approval_prompt=auto`;
   window.location.href = url;

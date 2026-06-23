@@ -27,6 +27,10 @@ exports.handler = async function (event) {
     const clientId = process.env.STRAVA_CLIENT_ID;
     const clientSecret = process.env.STRAVA_CLIENT_SECRET;
 
+    console.log("DEBUG client_id:", clientId);
+    console.log("DEBUG client_secret length:", clientSecret ? clientSecret.length : "MISSING");
+    console.log("DEBUG code recibido:", code);
+
     if (!clientId || !clientSecret) {
       return {
         statusCode: 500,
@@ -47,10 +51,23 @@ exports.handler = async function (event) {
 
     const data = await response.json();
 
-    if (data.errors) {
+    // DEBUG TEMPORAL: si hay error, devolvemos todo el detalle en la respuesta
+    // para verlo directamente en el navegador sin depender de los logs de Netlify
+    if (data.errors || !data.access_token) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: data.message || "Error de Strava", details: data.errors }),
+        body: JSON.stringify({
+          error: data.message || "Error de Strava",
+          details: data.errors,
+          debug: {
+            client_id_usado: clientId,
+            client_secret_longitud: clientSecret ? clientSecret.length : 0,
+            client_secret_primeros4: clientSecret ? clientSecret.substring(0, 4) : null,
+            code_recibido: code,
+            strava_status: response.status,
+            strava_respuesta_completa: data,
+          },
+        }),
       };
     }
 
